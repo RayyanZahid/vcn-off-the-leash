@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Navier–Stokes</title>
+<style>
+  :root{ --bg:#05070a; --fg:#7CF59C; --glow:#7CF59C; }
+  body.green{ --bg:#7CF59C; --fg:#04140b; --glow:transparent; }   /* VCN bright-mint inversion */
+
+  html,body{
+    margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    overflow:hidden;transition:background .35s ease,color .35s ease;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;cursor:crosshair;}
+  pre#screen{
+    margin:0;line-height:1.0;white-space:pre;user-select:none;
+    /* bloom — layered text-shadow neon (no-op when --glow is transparent) */
+    text-shadow:0 0 3px var(--glow), 0 0 8px var(--glow), 0 0 16px var(--glow);
+  }
+  #ui{
+    position:fixed;top:12px;left:14px;z-index:5;font-size:12px;letter-spacing:.04em;
+    color:var(--fg);opacity:.7;line-height:1.6;
+  }
+  #ui b{font-weight:600;}
+  #swap{
+    font:inherit;font-size:11px;letter-spacing:.12em;cursor:pointer;
+    margin-top:8px;padding:5px 11px;border-radius:6px;
+    background:transparent;color:var(--fg);border:1px solid currentColor;opacity:.85;
+  }
+  #swap:hover{opacity:1;}
+</style>
+</head>
+<body class="dark">
+<div id="stage"><pre id="screen"></pre></div>
+<div id="ui">
+  <b>NAVIER&ndash;STOKES // ascii</b><br>
+  move = wake &nbsp;·&nbsp; left-click = shockwave &nbsp;·&nbsp; space = reseed<br>
+  <button id="swap">SWITCH ▸ VCN GREEN</button>
+</div>
+
+<script>
+/* ============================================================
+   Stable Fluids — Jos Stam's real-time Navier–Stokes solver
+   (semi-Lagrangian advection + Gauss–Seidel pressure projection),
+   rendered to a monospace ASCII grid.
+   ============================================================ */
+const screenEl = document.getElementById('screen');
+const stage    = document.getElementById('stage');
+
+let N, W, H, CELL_W, CELL_H;
+const RAMP = " .,:;irsXA253hMHGS#9B&@";
+const RAMP_LEN = RAMP.length;
+const ARROWS = ['→','↗','↑','↖','←','↙','↓','↘'];
+
+let size, u, v, u0, v0, dens, dens0;
+const DIFF=0.0, VISC=0.0, dt=0.12, ITER=12;
+
+function IX(x,y){ return x + (N+2)*y; }
+function allocate(){
+  size=(N+2)*(N+2);
+  u=new Float32Array(size); v=new Float32Array(size);
+  u0=new Float32Array(size); v0=new Float32Array(size);
+  dens=new Float32Array(size); dens0=new Float32Array(size);
+}
+
+// ---- solver primitives ----
+function addSource(x,s){ for(let i=0;i<size;i++) x[i]+=dt*s[i]; }
+function setBnd(b,x){
+  for(let i=1;i<=N;i++){
+    x[IX(0,i)]  =b===1?-x[IX(1,i)]:x[IX(1,i)];
+    x[IX(N+1,i)]=b===1?-x[IX(N,i)]:x[IX(N,i)];
+    x[IX(i,0)]  =b===2?-x[IX(i,1)]:x[IX(i,1)];
+    x[IX(i,N+1)]=b===2?-x[IX(i,N)]:x[IX(i,N)];
+  }
+  x[IX(0,0)]    =0.5*(x[IX(1,0)]+x[IX(0,1)]);
+  x[IX(0,N+1)]  =0.5*(x[IX(1,N+1)]+x[IX(0,N)]);
+  x[IX(N+1,0)]  =0.5*(x[IX(N,0)]+x[IX(N+1,1)]);
+  x[IX(N+1,N+1)]=0.5*(x[IX(N,N+1)]+x[IX(N+1,N)]);
+}
+function linSolve(b,x,x0,a,c){
+  const invc=1/c;
+  for(let k=0;k<ITER;k++){
+    for(let i=1;i<=N;i++)for(let j=1;j<=N;j++)
+      x[IX(i,j)]=(x0[IX(i,j)]+a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))*invc;
+    setBnd(b,x);
+  }
+}
+function diffuse(b,x,x0,diff){ const a=dt*diff*N*N; linSolve(b,x,x0,a,1+4*a); }
+function advect(b,d,d0,uu,vv){
+  const dt0=dt*N;
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    let x=i-dt0*uu[IX(i,j)], y=j-dt0*vv[IX(i,j)];
+    if(x<0.5)x=0.5; if(x>N+0.5)x=N+0.5; const i0=x|0,i1=i0+1;
+    if(y<0.5)y=0.5; if(y>N+0.5)y=N+0.5; const j0=y|0,j1=j0+1;
+    const s1=x-i0,s0=1-s1,t1=y-j0,t0=1-t1;
+    d[IX(i,j)]=s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+  }
+  setBnd(b,d);
+}
+function project(uu,vv,p,div){
+  const h=1/N;
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    div[IX(i,j)]=-0.5*h*(uu[IX(i+1,j)]-uu[IX(i-1,j)]+vv[IX(i,j+1)]-vv[IX(i,j-1)]);
+    p[IX(i,j)]=0;
+  }
+  setBnd(0,div); setBnd(0,p); linSolve(0,p,div,1,4);
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    uu[IX(i,j)]-=0.5*(p[IX(i+1,j)]-p[IX(i-1,j)])/h;
+    vv[IX(i,j)]-=0.5*(p[IX(i,j+1)]-p[IX(i,j-1)])/h;
+  }
+  setBnd(1,uu); setBnd(2,vv);
+}
+function velStep(){
+  addSource(u,u0); addSource(v,v0);
+  if(VISC>0){ [u0,u]=[u,u0]; diffuse(1,u,u0,VISC); [v0,v]=[v,v0]; diffuse(2,v,v0,VISC); }  // skip: VISC=0 → diffuse is a no-op 12-iter copy
+  project(u,v,u0,v0);
+  [u0,u]=[u,u0]; [v0,v]=[v,v0];
+  advect(1,u,u0,u0,v0); advect(2,v,v0,u0,v0);
+  project(u,v,u0,v0);
+}
+function densStep(){
+  addSource(dens,dens0);
+  if(DIFF>0){ [dens0,dens]=[dens,dens0]; diffuse(0,dens,dens0,DIFF); }                    // skip: DIFF=0 → diffuse is a no-op 12-iter copy
+  [dens0,dens]=[dens,dens0]; advect(0,dens,dens0,u,v);
+}
+function clearSources(){ u0.fill(0); v0.fill(0); dens0.fill(0); }
+
+// expanding spherical waves (left-click): each is a ring radiating outward
+// through the ASCII field, with a couple of trailing ripple crests.
+let waves=[];
+const WAVE_SIG=1.7;
+function stepWaves(){
+  const maxR=Math.hypot(W,H);
+  for(let k=waves.length-1;k>=0;k--){
+    const wv=waves[k]; wv.r+=1.5; wv.life-=0.010;
+    if(wv.life<=0 || wv.r>maxR) waves.splice(k,1);
+  }
+}
+
+// ---- render: density ramp, plus wave rings, plus a faint flow glyph where ink is thin ----
+function render(){
+  let out='';
+  for(let j=1;j<=H;j++){
+    let line='';
+    for(let i=1;i<=W;i++){
+      const d=dens[IX(i,j)], vx=u[IX(i,j)], vy=v[IX(i,j)];
+      let inten=Math.min(1,d);
+      for(let k=0;k<waves.length;k++){
+        const wv=waves[k];
+        const dd=Math.hypot(i-wv.x, j-wv.y)-wv.r;
+        if(dd>-7 && dd<7)
+          inten += wv.life*Math.exp(-dd*dd/(2*WAVE_SIG*WAVE_SIG))*(0.75+0.25*Math.cos(dd*0.9));
+      }
+      if(inten>1) inten=1;
+      const idx=Math.min(RAMP_LEN-1,(inten*(RAMP_LEN-1))|0);
+      if(idx<2 && (vx*vx+vy*vy)>0.0004){
+        const oct=Math.round(Math.atan2(vy,vx)/(Math.PI/4))&7;
+        line+=ARROWS[(oct+8)%8];
+      } else line+=RAMP[idx];
+    }
+    out+=line+(j<H?'\n':'');
+  }
+  screenEl.textContent=out;
+}
+
+// ---- interaction ----
+function cellFromEvent(e){
+  const r=screenEl.getBoundingClientRect();
+  const gx=Math.floor((e.clientX-r.left)/(r.width /W))+1;
+  const gy=Math.floor((e.clientY-r.top )/(r.height/H))+1;
+  return [Math.max(1,Math.min(W,gx)), Math.max(1,Math.min(H,gy))];
+}
+function injectWake(gx,gy,fx,fy,amt){
+  const r=1;
+  for(let oj=-r;oj<=r;oj++)for(let oi=-r;oi<=r;oi++){
+    const i=gx+oi,j=gy+oj; if(i<1||i>N||j<1||j>N)continue;
+    const fall=1-Math.min(1,Math.hypot(oi,oj)/(r+0.6));
+    dens0[IX(i,j)]+=amt*fall; u0[IX(i,j)]+=fx*fall; v0[IX(i,j)]+=fy*fall;
+  }
+}
+let pmx=0,pmy=0,hasPrev=false;
+stage.addEventListener('pointermove', e=>{
+  autoSeed=false;
+  let dx=0,dy=0; if(hasPrev){ dx=e.clientX-pmx; dy=e.clientY-pmy; }
+  pmx=e.clientX; pmy=e.clientY; hasPrev=true;
+  const [gx,gy]=cellFromEvent(e);
+  injectWake(gx,gy,
+    Math.max(-6,Math.min(6,(dx/CELL_W)*0.9)),
+    Math.max(-6,Math.min(6,(dy/CELL_H)*0.9)), 30);
+});
+
+// left-click shockwave: displace existing ink radially outward (no velocity, no new ink)
+function sampleDens(f,x,y){
+  if(x<1)x=1; if(x>N)x=N; if(y<1)y=1; if(y>N)y=N;
+  const i0=x|0,j0=y|0,i1=Math.min(N,i0+1),j1=Math.min(N,j0+1);
+  const s1=x-i0,s0=1-s1,t1=y-j0,t0=1-t1;
+  return s0*(t0*f[IX(i0,j0)]+t1*f[IX(i0,j1)])+s1*(t0*f[IX(i1,j0)]+t1*f[IX(i1,j1)]);
+}
+function shockwave(gx,gy){
+  const R=Math.round(Math.min(W,H)*0.30), push=R*0.55, src=dens.slice();
+  for(let j=Math.max(1,gy-R);j<=Math.min(N,gy+R);j++)
+    for(let i=Math.max(1,gx-R);i<=Math.min(N,gx+R);i++){
+      const di=i-gx,dj=j-gy,d=Math.hypot(di,dj); if(d>R)continue;
+      if(d<0.001){ dens[IX(i,j)]=0; continue; }
+      const disp=push*(1-d/R);
+      dens[IX(i,j)]=sampleDens(src, i-(di/d)*disp, j-(dj/d)*disp);
+    }
+}
+stage.addEventListener('pointerdown', e=>{
+  if(e.button!==0) return;
+  autoSeed=false;
+  const [gx,gy]=cellFromEvent(e);
+  shockwave(gx,gy);                          // shove existing ink outward
+  waves.push({x:gx, y:gy, r:0, life:1});     // radiate a spherical ASCII wave
+});
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); u.fill(0);v.fill(0);dens.fill(0);clearSources(); }
+});
+
+// ---- theme switch ----
+const swap=document.getElementById('swap');
+swap.addEventListener('click', ()=>{
+  const green=document.body.classList.toggle('green');
+  document.body.classList.toggle('dark', !green);
+  swap.textContent = green ? 'SWITCH ▸ TERMINAL' : 'SWITCH ▸ VCN GREEN';
+  measureAndBuild();                 // re-fit the grid to the theme's font size
+});
+
+// ---- ambient plumes so it's alive on load (handed off on first interaction) ----
+let t=0, autoSeed=true;
+function ambient(){
+  t+=dt;
+  if(EMBED){
+    // calm resting state: a few small, slow bubbles drifting up — the mouse does the rest
+    if(Math.random()<0.10){
+      const gx=2+Math.floor(Math.random()*(W-2));
+      const gy=H-2-Math.floor(Math.random()*H*0.34);   // spawn across the lower third
+      injectWake(gx, gy, (Math.random()-0.5)*1.0, -1.6, 5);
+    }
+    return;
+  }
+  for(const b of [{x:0.34,p:0},{x:0.66,p:Math.PI}]){
+    const gx=Math.round(b.x*W), gy=H-3, swirl=Math.sin(t*0.9+b.p);
+    injectWake(gx,gy, swirl*8, -16, 24);
+  }
+}
+
+// ---- offscreen pause: parent posts vcn:pause / vcn:run as the iframe leaves / enters the viewport ----
+let __paused=false;
+addEventListener('message',e=>{ if(e.data==='vcn:pause')__paused=true; else if(e.data==='vcn:run')__paused=false; });
+
+// ---- main loop ----
+function frame(){
+  if(__paused){ requestAnimationFrame(frame); return; }   // idle cheaply while scrolled away
+  if(autoSeed||EMBED) ambient();   // embedded: keep the gentle bubbles alive even after the mouse interacts
+  velStep(); densStep();
+  for(let i=0;i<size;i++) dens[i]*=0.985;     // fade so it doesn't saturate
+  clearSources(); stepWaves(); render();
+  requestAnimationFrame(frame);
+}
+
+// ---- responsive layout ----
+function measureAndBuild(){
+  // green (VCN) theme: larger, bolder black glyphs; dark theme: dense terminal
+  const green=document.body.classList.contains('green');
+  const fs = green
+    ? Math.max(16, Math.min(30, Math.floor(window.innerWidth/64)))
+    : Math.max(8,  Math.min(16, Math.floor(window.innerWidth/110)));
+  screenEl.style.fontSize=fs+'px';
+  const probe=document.createElement('pre');
+  probe.style.cssText='position:absolute;visibility:hidden;margin:0;line-height:1.0;white-space:pre;';
+  probe.style.font=getComputedStyle(screenEl).font;
+  probe.textContent=Array.from({length:10},()=>'M'.repeat(50)).join('\n');
+  document.body.appendChild(probe);
+  const r=probe.getBoundingClientRect();
+  CELL_W=r.width/50; CELL_H=r.height/10; probe.remove();
+  W=Math.max(20,Math.floor(window.innerWidth /CELL_W)-1);
+  H=Math.max(20,Math.floor(window.innerHeight/CELL_H)-1);
+  N=Math.max(W,H);
+  allocate();
+}
+// when embedded in the site (iframe), drop the in-sim HUD — black field, green mouse reaction only
+const EMBED=window.self!==window.top;
+if(EMBED){ const u=document.getElementById('ui'); if(u) u.style.display='none'; }
+measureAndBuild();
+let rzTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(measureAndBuild,150); });
+frame();
+</script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Game of Life</title>
+<style>
+  :root{ --bg:#05070a; --fg:#7CF59C; --glow:#7CF59C; }
+  body.green{ --bg:#7CF59C; --fg:#04140b; --glow:transparent; }   /* VCN bright-mint inversion */
+
+  html,body{
+    margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    overflow:hidden;transition:background .35s ease,color .35s ease;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;cursor:crosshair;}
+  pre#screen{
+    margin:0;line-height:1.0;white-space:pre;user-select:none;
+    text-shadow:0 0 3px var(--glow), 0 0 8px var(--glow), 0 0 16px var(--glow);  /* bloom (no-op on green) */
+  }
+  #ui{
+    position:fixed;top:12px;left:14px;z-index:5;font-size:12px;letter-spacing:.04em;
+    color:var(--fg);opacity:.7;line-height:1.6;
+  }
+  #ui b{font-weight:600;}
+  #swap{
+    font:inherit;font-size:11px;letter-spacing:.12em;cursor:pointer;
+    margin-top:8px;padding:5px 11px;border-radius:6px;
+    background:transparent;color:var(--fg);border:1px solid currentColor;opacity:.85;
+  }
+  #swap:hover{opacity:1;}
+  .patrow{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:540px;}
+  .patbtn{
+    font:inherit;font-size:10px;letter-spacing:.08em;cursor:pointer;
+    padding:5px 9px;border-radius:6px;background:transparent;color:var(--fg);
+    border:1px solid currentColor;opacity:.72;
+  }
+  .patbtn:hover{opacity:1;background:var(--fg);color:var(--bg);}
+</style>
+</head>
+<body class="dark">
+<div id="stage"><pre id="screen"></pre></div>
+<div id="ui">
+  <b>GAME OF LIFE // ascii</b><br>
+  move = sprinkle a random pattern every 32 cells &nbsp;·&nbsp; space = randomize &nbsp;·&nbsp; c = clear &nbsp;·&nbsp; p = pause<br>
+  stamp at cursor: <b>1</b> glider <b>2</b> LWSS <b>3</b> blinker <b>4</b> toad <b>5</b> beacon
+  <b>6</b> pulsar <b>7</b> pentadecathlon <b>8</b> glider-gun <b>9</b> R-pentomino<br>
+  <span id="spawned" style="opacity:.85">&nbsp;</span>
+  <div class="patrow">
+    <button class="patbtn" data-pat="1">glider</button><button class="patbtn" data-pat="2">LWSS</button><button class="patbtn" data-pat="3">blinker</button><button class="patbtn" data-pat="4">toad</button><button class="patbtn" data-pat="5">beacon</button><button class="patbtn" data-pat="6">pulsar</button><button class="patbtn" data-pat="7">pentadecathlon</button><button class="patbtn" data-pat="8">glider gun</button><button class="patbtn" data-pat="9">R-pentomino</button>
+  </div>
+  <button id="swap">SWITCH ▸ VCN GREEN</button>
+</div>
+
+<script>
+/* ============================================================
+   Conway's Game of Life (B3/S23, toroidal) on a monospace grid.
+   Twists: live cells render by AGE (newborn light -> long-lived
+   dense), and a cell that dies leaves a fading GHOST so you can
+   see collapsing structure. Draw with the mouse.
+   ============================================================ */
+const screenEl = document.getElementById('screen');
+const stage    = document.getElementById('stage');
+
+let W, H, CELL_W, CELL_H;
+let cur, nxt, age, ghost;
+
+const ALIVE = ":-=+*o#@";          // by age: newborn (light) -> stable (heavy)
+const ALIVE_LEN = ALIVE.length;
+
+const STEP_EVERY = 4;              // sim ticks every Nth animation frame (~15/s)
+let fcount=0, paused=false;
+
+function I(x,y){ return y*W+x; }
+function alloc(){
+  const n=W*H;
+  cur=new Uint8Array(n); nxt=new Uint8Array(n);
+  age=new Uint16Array(n); ghost=new Float32Array(n);
+}
+function randomize(p=0.18){
+  for(let i=0;i<cur.length;i++){ cur[i]=Math.random()<p?1:0; age[i]=cur[i]; ghost[i]=0; }
+}
+
+function step(){
+  for(let i=0;i<ghost.length;i++) ghost[i]*=0.55;     // fade ghosts first
+  for(let y=0;y<H;y++){
+    const yu=(y-1+H)%H, yd=(y+1)%H;
+    for(let x=0;x<W;x++){
+      const xl=(x-1+W)%W, xr=(x+1)%W;
+      const n = cur[I(xl,yu)]+cur[I(x,yu)]+cur[I(xr,yu)]
+              + cur[I(xl,y )]             +cur[I(xr,y )]
+              + cur[I(xl,yd)]+cur[I(x,yd)]+cur[I(xr,yd)];
+      const id=I(x,y), a=cur[id];
+      const live = a ? (n===2||n===3) : (n===3);
+      nxt[id]=live?1:0;
+      if(live) age[id] = a ? Math.min(65535, age[id]+1) : 1;
+      else { if(a) ghost[id]=1.0; age[id]=0; }          // just died -> ghost
+    }
+  }
+  [cur,nxt]=[nxt,cur];
+}
+
+function render(){
+  let out='';
+  for(let y=0;y<H;y++){
+    let line='';
+    for(let x=0;x<W;x++){
+      const id=I(x,y);
+      if(cur[id]) line+=ALIVE[Math.min(ALIVE_LEN-1, age[id]-1)];
+      else { const g=ghost[id]; line+= g>0.5?'·': g>0.16?'.':' '; }
+    }
+    out+=line+(y<H-1?'\n':'');
+  }
+  screenEl.textContent=out;
+}
+
+// ---- famous patterns (stamped at the cursor with number keys) ----
+function art(s){                         // 'O' = alive, anything else dead
+  const lines=s.split('\n'), c=[];
+  for(let y=0;y<lines.length;y++)
+    for(let x=0;x<lines[y].length;x++) if(lines[y][x]==='O') c.push([x,y]);
+  return c;
+}
+const PULSAR =
+"..OOO...OOO..\n.............\nO....O.O....O\nO....O.O....O\nO....O.O....O\n"+
+"..OOO...OOO..\n.............\n..OOO...OOO..\nO....O.O....O\nO....O.O....O\n"+
+"O....O.O....O\n.............\n..OOO...OOO..";
+// Gosper glider gun — the classic 36-cell, period-30 infinite-growth pattern
+const GUN = [
+  [24,0],[22,1],[24,1],
+  [12,2],[13,2],[20,2],[21,2],[34,2],[35,2],
+  [11,3],[15,3],[20,3],[21,3],[34,3],[35,3],
+  [0,4],[1,4],[10,4],[16,4],[20,4],[21,4],
+  [0,5],[1,5],[10,5],[14,5],[16,5],[17,5],[22,5],[24,5],
+  [10,6],[16,6],[24,6],
+  [11,7],[15,7],
+  [12,8],[13,8]
+];
+const PATTERNS = {
+  '1':art(".O.\n..O\nOOO"),
+  '2':art("O..O.\n....O\nO...O\n.OOOO"),
+  '3':art("OOO"),
+  '4':art(".OOO\nOOO."),
+  '5':art("OO..\nOO..\n..OO\n..OO"),
+  '6':art(PULSAR),
+  '7':art("..O....O..\nOO.OOOO.OO\n..O....O.."),
+  '8':GUN,
+  '9':art(".OO\nOO.\n.O.")
+};
+function stamp(cells, cx, cy){
+  let mx=0, my=0;
+  for(const [x,y] of cells){ if(x>mx)mx=x; if(y>my)my=y; }
+  const ox=cx-(mx>>1), oy=cy-(my>>1);                    // centre on the cursor
+  for(const [x,y] of cells){
+    const id=I(((x+ox)%W+W)%W, ((y+oy)%H+H)%H);
+    cur[id]=1; age[id]=1; ghost[id]=0;
+  }
+}
+
+// ---- movement -> random pattern sprinkler ----
+const KEYS=['1','2','3','4','5','6','7','8','9'];
+const NAMES={'1':'glider','2':'LWSS','3':'blinker','4':'toad','5':'beacon',
+             '6':'pulsar','7':'pentadecathlon','8':'glider-gun','9':'R-pentomino'};
+const SPAWN_EVERY=32;                 // grid cells of cursor travel per spawn
+let lastCell={x:0,y:0}, hasPrev=false, accum=0;
+const spawnedEl=document.getElementById('spawned');
+
+function cellOf(e){
+  const r=screenEl.getBoundingClientRect();
+  return { x:Math.floor((e.clientX-r.left)/(r.width /W)),
+           y:Math.floor((e.clientY-r.top )/(r.height/H)) };
+}
+// move the cursor: every SPAWN_EVERY cells of travel, drop a random pattern
+stage.addEventListener('pointermove', e=>{
+  const c=cellOf(e);
+  if(hasPrev) accum+=Math.hypot(c.x-lastCell.x, c.y-lastCell.y); else hasPrev=true;
+  lastCell=c;
+  while(accum>=SPAWN_EVERY){
+    accum-=SPAWN_EVERY;
+    const k=KEYS[(Math.random()*9)|0];
+    stamp(PATTERNS[k], c.x, c.y);
+    if(spawnedEl) spawnedEl.textContent='▸ spawned '+NAMES[k]+' @ '+c.x+','+c.y;
+  }
+});
+
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); randomize(); }
+  else if(e.key==='c'||e.key==='C'){ cur.fill(0); age.fill(0); ghost.fill(0); }
+  else if(e.key==='p'||e.key==='P'){ paused=!paused; }
+  else if(PATTERNS[e.key]){ const c=lastCell.x?lastCell:{x:W>>1,y:H>>1}; stamp(PATTERNS[e.key], c.x, c.y); }
+});
+
+// ---- pattern buttons: stamp any lifeform on click (at last cursor, else center) ----
+document.querySelectorAll('.patbtn').forEach(btn=>btn.addEventListener('click', ()=>{
+  const k=btn.dataset.pat, c=(lastCell.x||lastCell.y)?lastCell:{x:W>>1,y:H>>1};
+  stamp(PATTERNS[k], c.x, c.y);
+  if(spawnedEl) spawnedEl.textContent='▸ spawned '+NAMES[k]+' @ '+c.x+','+c.y;
+}));
+
+// ---- theme switch ----
+const swap=document.getElementById('swap');
+swap.addEventListener('click', ()=>{
+  const green=document.body.classList.toggle('green');
+  document.body.classList.toggle('dark', !green);
+  swap.textContent = green ? 'SWITCH ▸ TERMINAL' : 'SWITCH ▸ VCN GREEN';
+  measureAndBuild();
+});
+
+// ---- main loop ----
+function frame(){
+  if(!paused && (++fcount % STEP_EVERY === 0)) step();
+  render();
+  requestAnimationFrame(frame);
+}
+
+// ---- responsive layout ----
+function measureAndBuild(){
+  const green=document.body.classList.contains('green');
+  const fs = green
+    ? Math.max(16, Math.min(30, Math.floor(window.innerWidth/64)))
+    : Math.max(8,  Math.min(16, Math.floor(window.innerWidth/110)));
+  screenEl.style.fontSize=fs+'px';
+  const probe=document.createElement('pre');
+  probe.style.cssText='position:absolute;visibility:hidden;margin:0;line-height:1.0;white-space:pre;';
+  probe.style.font=getComputedStyle(screenEl).font;
+  probe.textContent=Array.from({length:10},()=>'M'.repeat(50)).join('\n');
+  document.body.appendChild(probe);
+  const r=probe.getBoundingClientRect();
+  CELL_W=r.width/50; CELL_H=r.height/10; probe.remove();
+  W=Math.max(20,Math.floor(window.innerWidth /CELL_W)-1);
+  H=Math.max(20,Math.floor(window.innerHeight/CELL_H)-1);
+  alloc();                 // start empty — drag to draw is the default; space = randomize
+}
+measureAndBuild();
+let rzTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(measureAndBuild,150); });
+frame();
+</script>
+</body>
+</html>

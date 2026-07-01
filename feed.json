@@ -1,0 +1,19 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Vibe Coding Nights",
+  "home_page_url": "https://www.vibecodingnights.com",
+  "feed_url": "https://www.vibecodingnights.com/feed.json",
+  "description": "Upcoming Vibe Coding Nights build nights at Frontier Tower, San Francisco.",
+  "items": [
+    { "id": "vcn-41", "url": "https://luma.com/vcn-41-bare-metal", "title": "VCN #41: Bare Metal", "date_published": "2026-07-15T19:00:00-07:00", "content_text": "Run a coding agent against a local open-weights model. No API bill. Wed Jul 15, 7pm, Frontier Tower Floor 10." },
+    { "id": "vcn-42", "url": "https://luma.com/vcn-42-the-sandbox", "title": "VCN #42: The Sandbox", "date_published": "2026-07-18T10:00:00-07:00", "content_text": "Give your agent a disposable code-exec sandbox. Sat Jul 18, 10am, Frontier Tower Floor 9." },
+    { "id": "vcn-43", "url": "https://luma.com/vcn-43-cattle-not-pets", "title": "VCN #43: Cattle, Not Pets", "date_published": "2026-07-22T19:00:00-07:00", "content_text": "Spin your agent a throwaway micro VM. Wed Jul 22, 7pm, Frontier Tower Floor 10." },
+    { "id": "vcn-44", "url": "https://luma.com/vcn-44-the-loop", "title": "VCN #44: The Loop", "date_published": "2026-07-25T10:00:00-07:00", "content_text": "Build the agent loop from scratch: plan, act, observe. Sat Jul 25, 10am, Frontier Tower Floor 9." },
+    { "id": "vcn-45", "url": "https://luma.com/vcn-45-bench", "title": "VCN #45: Bench", "date_published": "2026-07-29T19:00:00-07:00", "content_text": "Write an eval for your coding agent. Your tasks, pass^k. Wed Jul 29, 7pm, Frontier Tower Floor 10." },
+    { "id": "vcn-46", "url": "https://luma.com/vcn-46-bake-off", "title": "VCN #46: Bake-Off", "date_published": "2026-08-01T10:00:00-07:00", "content_text": "Coding agents head to head on your bench. Sat Aug 1, 10am, Frontier Tower Floor 9." },
+    { "id": "vcn-47", "url": "https://luma.com/vcn-47-fast-local", "title": "VCN #47: Fast Local", "date_published": "2026-08-05T19:00:00-07:00", "content_text": "Quantize and serve local models fast. Wed Aug 5, 7pm, Frontier Tower Floor 10." },
+    { "id": "vcn-48", "url": "https://luma.com/vcn-48-total-recall", "title": "VCN #48: Total Recall", "date_published": "2026-08-08T10:00:00-07:00", "content_text": "Repo memory and retrieval for the agent. Sat Aug 8, 10am, Frontier Tower Floor 9." },
+    { "id": "vcn-49", "url": "https://luma.com/vcn-49-the-swarm", "title": "VCN #49: The Swarm", "date_published": "2026-08-12T19:00:00-07:00", "content_text": "Parallel agents fanned out in git worktrees. Wed Aug 12, 7pm, Frontier Tower Floor 10." },
+    { "id": "vcn-50", "url": "https://luma.com/vcn-50-own-the-stack", "title": "VCN #50: Own the Stack", "date_published": "2026-08-15T10:00:00-07:00", "content_text": "Capstone: self-host the full local rig, zero API bill. Sat Aug 15, 10am, Frontier Tower Floor 9." }
+  ]
+}

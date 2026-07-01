@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Boids</title>
+<style>
+  :root{ --bg:#05070a; --fg:#7CF59C; --glow:#7CF59C; }
+  body.green{ --bg:#7CF59C; --fg:#04140b; --glow:transparent; }   /* VCN bright-mint inversion */
+
+  html,body{
+    margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    overflow:hidden;transition:background .35s ease,color .35s ease;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;cursor:crosshair;}
+  pre#screen{
+    margin:0;line-height:1.0;white-space:pre;user-select:none;
+    text-shadow:0 0 3px var(--glow), 0 0 8px var(--glow), 0 0 16px var(--glow);  /* bloom (no-op on green) */
+  }
+  #ui{
+    position:fixed;top:12px;left:14px;z-index:5;font-size:12px;letter-spacing:.04em;
+    color:var(--fg);opacity:.7;line-height:1.6;
+  }
+  #ui b{font-weight:600;}
+  #swap{
+    font:inherit;font-size:11px;letter-spacing:.12em;cursor:pointer;
+    margin-top:8px;padding:5px 11px;border-radius:6px;
+    background:transparent;color:var(--fg);border:1px solid currentColor;opacity:.85;
+  }
+  #swap:hover{opacity:1;}
+</style>
+</head>
+<body class="dark">
+<div id="stage"><pre id="screen"></pre></div>
+<div id="ui">
+  <b>ASCII BOIDS // flock + chem-trail</b><br>
+  move = predator (they flee) &nbsp;·&nbsp; click = scatter &nbsp;·&nbsp; space = reseed<br>
+  <button id="swap">SWITCH ▸ VCN GREEN</button>
+</div>
+
+<script>
+/* ============================================================
+   Boids (Reynolds 1986: separation / alignment / cohesion) on a
+   monospace ASCII grid. Each boid lays down a pheromone trail that
+   fades; its glyph encodes heading (8-way) and local alignment
+   (3 families: scattered ticks -> arrows -> heavy arrowheads).
+   ============================================================ */
+const screenEl = document.getElementById('screen');
+const stage    = document.getElementById('stage');
+
+let W, H, CELL_W, CELL_H;
+let boids=[], trail=null;
+
+// pheromone ramp (fades down as the trail decays)
+const TRAIL = " .:-=+*#";
+const TRAIL_LEN = TRAIL.length;
+
+// glyphs ordered by octant of atan2(vy,vx) with y pointing DOWN:
+//   0:E 1:SE 2:S 3:SW 4:W 5:NW 6:N 7:NE
+const HEAVY = ['▶','◢','▼','◣','◀','◤','▲','◥'];   // tightly aligned
+const MED   = ['→','↘','↓','↙','←','↖','↑','↗'];   // loosely aligned
+const LITE  = ['-','\\','|','/','-','\\','|','/'];  // scattered / solo
+
+// ---- flocking params (in grid cells) ----
+const PERCEPT=6.0, PERCEPT2=PERCEPT*PERCEPT;
+const SEP=2.2,     SEP2=SEP*SEP;
+const W_ALIGN=0.055, W_COH=0.006, W_SEP=0.09, W_FLEE=0.55;
+const MAXSPD=0.32, MINSPD=0.12, MAXFORCE=0.05;
+const PRED_R=8, PRED_R2=PRED_R*PRED_R;
+
+let pred=null, predT=0;
+
+function wrap(d,span){ if(d>span*0.5)d-=span; else if(d<-span*0.5)d+=span; return d; }
+function limit(b,prop_x,prop_y,max){
+  const m=Math.hypot(b[prop_x],b[prop_y]);
+  if(m>max){ b[prop_x]=b[prop_x]/m*max; b[prop_y]=b[prop_y]/m*max; }
+}
+
+function seedBoids(){
+  const count=Math.min(320, Math.max(30, Math.floor(W*H/45)));
+  boids=[];
+  for(let k=0;k<count;k++){
+    const a=Math.random()*Math.PI*2, s=MINSPD+Math.random()*(MAXSPD-MINSPD);
+    boids.push({x:Math.random()*W, y:Math.random()*H, vx:Math.cos(a)*s, vy:Math.sin(a)*s, al:0});
+  }
+}
+
+function flock(){
+  const now=performance.now();
+  if(pred && now-predT>600) pred=null;
+
+  for(let i=0;i<boids.length;i++){
+    const b=boids[i];
+    let ax=0,ay=0, cx=0,cy=0, sx=0,sy=0;     // align / cohesion / separation accums
+    let n=0, sumux=0,sumuy=0;
+
+    for(let j=0;j<boids.length;j++){
+      if(j===i) continue;
+      const o=boids[j];
+      const dx=wrap(o.x-b.x,W), dy=wrap(o.y-b.y,H);
+      const d2=dx*dx+dy*dy;
+      if(d2>PERCEPT2) continue;
+      n++;
+      ax+=o.vx; ay+=o.vy;                      // alignment
+      cx+=dx;  cy+=dy;                          // cohesion (toward neighbour offset)
+      const om=Math.hypot(o.vx,o.vy)||1; sumux+=o.vx/om; sumuy+=o.vy/om;
+      if(d2<SEP2 && d2>0){                      // separation (push away, weighted by closeness)
+        sx-=dx/d2; sy-=dy/d2;
+      }
+    }
+
+    let fx=0,fy=0;
+    if(n>0){
+      fx += (ax/n)*W_ALIGN;
+      fy += (ay/n)*W_ALIGN;
+      fx += (cx/n)*W_COH;
+      fy += (cy/n)*W_COH;
+      fx += sx*W_SEP;
+      fy += sy*W_SEP;
+      b.al = Math.hypot(sumux,sumuy)/n;         // local order parameter 0..1
+    } else b.al = 0;
+
+    // predator flee (mouse)
+    if(pred){
+      const dx=wrap(b.x-pred.x,W), dy=wrap(b.y-pred.y,H), d2=dx*dx+dy*dy;
+      if(d2<PRED_R2 && d2>0){ const d=Math.sqrt(d2); fx+=(dx/d)*W_FLEE; fy+=(dy/d)*W_FLEE; }
+    }
+
+    // clamp steering force, apply
+    const fm=Math.hypot(fx,fy);
+    if(fm>MAXFORCE){ fx=fx/fm*MAXFORCE; fy=fy/fm*MAXFORCE; }
+    b.vx+=fx; b.vy+=fy;
+
+    // keep speed in band
+    const sp=Math.hypot(b.vx,b.vy);
+    if(sp>MAXSPD){ b.vx=b.vx/sp*MAXSPD; b.vy=b.vy/sp*MAXSPD; }
+    else if(sp<MINSPD && sp>0){ b.vx=b.vx/sp*MINSPD; b.vy=b.vy/sp*MINSPD; }
+  }
+}
+
+function stepBoids(){
+  for(const b of boids){
+    b.x+=b.vx; b.y+=b.vy;
+    if(b.x<0)b.x+=W; else if(b.x>=W)b.x-=W;
+    if(b.y<0)b.y+=H; else if(b.y>=H)b.y-=H;
+    const gx=b.x|0, gy=b.y|0, idx=gy*W+gx;     // deposit pheromone
+    if(idx>=0&&idx<trail.length){ const t=trail[idx]+0.7; trail[idx]=t>1?1:t; }
+  }
+  for(let i=0;i<trail.length;i++) trail[i]*=0.9; // fade
+}
+
+function render(){
+  const cells=new Array(W*H);
+  for(let idx=0;idx<W*H;idx++){
+    const tv=trail[idx];
+    cells[idx]= tv<=0.02 ? ' ' : TRAIL[Math.min(TRAIL_LEN-1,(tv*(TRAIL_LEN-1))|0)];
+  }
+  for(const b of boids){
+    const gx=b.x|0, gy=b.y|0; if(gx<0||gx>=W||gy<0||gy>=H) continue;
+    const oct=((Math.round(Math.atan2(b.vy,b.vx)/(Math.PI/4))%8)+8)%8;
+    const fam = b.al<0.45 ? LITE : b.al<0.8 ? MED : HEAVY;
+    cells[gy*W+gx]=fam[oct];
+  }
+  let out='';
+  for(let gy=0;gy<H;gy++) out+=cells.slice(gy*W,gy*W+W).join('')+(gy<H-1?'\n':'');
+  screenEl.textContent=out;
+}
+
+// ---- interaction ----
+function cellFromEvent(e){
+  const r=screenEl.getBoundingClientRect();
+  return [ (e.clientX-r.left)/(r.width /W), (e.clientY-r.top)/(r.height/H) ];
+}
+stage.addEventListener('pointermove', e=>{
+  const [gx,gy]=cellFromEvent(e); pred={x:gx,y:gy}; predT=performance.now();
+});
+stage.addEventListener('pointerleave', ()=>{ pred=null; });
+stage.addEventListener('pointerdown', e=>{
+  if(e.button!==0) return;
+  const [gx,gy]=cellFromEvent(e);            // scatter: strong outward kick
+  for(const b of boids){
+    const dx=wrap(b.x-gx,W), dy=wrap(b.y-gy,H), d2=dx*dx+dy*dy;
+    if(d2<(PRED_R*2)*(PRED_R*2) && d2>0){ const d=Math.sqrt(d2); b.vx+=(dx/d)*1.6; b.vy+=(dy/d)*1.6; }
+  }
+});
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); trail.fill(0); seedBoids(); }
+});
+
+// ---- theme switch ----
+const swap=document.getElementById('swap');
+swap.addEventListener('click', ()=>{
+  const green=document.body.classList.toggle('green');
+  document.body.classList.toggle('dark', !green);
+  swap.textContent = green ? 'SWITCH ▸ TERMINAL' : 'SWITCH ▸ VCN GREEN';
+  measureAndBuild();
+});
+
+// ---- main loop ----
+function frame(){ flock(); stepBoids(); render(); requestAnimationFrame(frame); }
+
+// ---- responsive layout ----
+function measureAndBuild(){
+  const green=document.body.classList.contains('green');
+  const fs = green
+    ? Math.max(16, Math.min(30, Math.floor(window.innerWidth/64)))
+    : Math.max(8,  Math.min(16, Math.floor(window.innerWidth/110)));
+  screenEl.style.fontSize=fs+'px';
+  const probe=document.createElement('pre');
+  probe.style.cssText='position:absolute;visibility:hidden;margin:0;line-height:1.0;white-space:pre;';
+  probe.style.font=getComputedStyle(screenEl).font;
+  probe.textContent=Array.from({length:10},()=>'M'.repeat(50)).join('\n');
+  document.body.appendChild(probe);
+  const r=probe.getBoundingClientRect();
+  CELL_W=r.width/50; CELL_H=r.height/10; probe.remove();
+  W=Math.max(20,Math.floor(window.innerWidth /CELL_W)-1);
+  H=Math.max(20,Math.floor(window.innerHeight/CELL_H)-1);
+  trail=new Float32Array(W*H);
+  seedBoids();
+}
+measureAndBuild();
+let rzTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(measureAndBuild,150); });
+frame();
+</script>
+</body>
+</html>

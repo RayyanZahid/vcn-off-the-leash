@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>ASCII SENTINELS — fluid guardians vs. red</title>
+<style>
+  :root { --paper:#e9e6dd; --ink:#06080c; --green:#46ff9a; --red:#ff2f3e; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#04060a; overflow:hidden;
+    font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace; color:var(--paper); }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  .hud { position:fixed; left:18px; top:16px; z-index:10; pointer-events:none;
+    text-shadow:0 0 12px rgba(0,0,0,.9); }
+  .hud h1 { margin:0; font-size:13px; letter-spacing:.34em; font-weight:600;
+    color:var(--paper); }
+  .hud .sub { margin:5px 0 0; font-size:10.5px; letter-spacing:.12em; opacity:.6; }
+
+  .stats { position:fixed; right:18px; top:16px; z-index:10; text-align:right;
+    font-size:11px; letter-spacing:.08em; line-height:1.7; pointer-events:none;
+    text-shadow:0 0 12px rgba(0,0,0,.9); }
+  .stats .g { color:var(--green); }
+  .stats .r { color:var(--red); }
+  .stats .d { opacity:.45; }
+
+  .legend { position:fixed; left:18px; bottom:14px; z-index:10; font-size:10px;
+    letter-spacing:.08em; opacity:.55; line-height:1.8; pointer-events:none; }
+  .legend b { font-weight:600; }
+
+  .ctl { position:fixed; right:18px; bottom:14px; z-index:10; display:flex; gap:8px; }
+  .ctl button { pointer-events:auto; cursor:pointer; background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.16); color:var(--paper); font:inherit;
+    font-size:10px; letter-spacing:.12em; padding:6px 11px; border-radius:2px;
+    backdrop-filter:blur(4px); transition:.15s; }
+  .ctl button:hover { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.3); }
+
+  #boot { position:fixed; inset:0; z-index:30; display:grid; place-items:center;
+    background:#04060a; color:var(--paper); font-size:12px; letter-spacing:.3em; }
+
+  /* ---- slider panel ---- */
+  #panel { position:fixed; right:14px; top:64px; z-index:25; width:236px;
+    max-height:calc(100vh - 92px); overflow-y:auto; padding:12px 13px 14px;
+    background:rgba(6,10,14,.74); border:1px solid rgba(70,255,154,.22);
+    border-radius:3px; backdrop-filter:blur(7px); font-size:10px;
+    box-shadow:0 0 24px rgba(0,0,0,.5); transition:.2s; }
+  #panel.collapsed { max-height:34px; overflow:hidden; }
+  #panel .ph { display:flex; justify-content:space-between; align-items:center;
+    cursor:pointer; letter-spacing:.22em; color:var(--green); font-weight:600;
+    margin-bottom:9px; user-select:none; }
+  #panel .ph span.x { opacity:.6; font-size:11px; }
+  .row { margin:7px 0; }
+  .row .lab { display:flex; justify-content:space-between; letter-spacing:.1em;
+    opacity:.78; margin-bottom:3px; }
+  .row .lab .val { color:var(--green); opacity:.95; font-variant-numeric:tabular-nums; }
+  .row input[type=range] { -webkit-appearance:none; appearance:none; width:100%;
+    height:3px; background:rgba(255,255,255,.14); border-radius:2px; outline:none; }
+  .row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none;
+    width:11px; height:11px; border-radius:50%; background:var(--green);
+    box-shadow:0 0 7px rgba(70,255,154,.8); cursor:pointer; }
+  .row input[type=range]::-moz-range-thumb { width:11px; height:11px; border:none;
+    border-radius:50%; background:var(--green); box-shadow:0 0 7px rgba(70,255,154,.8);
+    cursor:pointer; }
+  .row.red input[type=range]::-webkit-slider-thumb { background:var(--red);
+    box-shadow:0 0 7px rgba(255,47,62,.8); }
+  .row.red input[type=range]::-moz-range-thumb { background:var(--red);
+    box-shadow:0 0 7px rgba(255,47,62,.8); }
+  .row.red .lab .val { color:var(--red); }
+  #panel .reset { margin-top:11px; width:100%; cursor:pointer; font:inherit;
+    font-size:9.5px; letter-spacing:.18em; padding:6px; color:var(--paper);
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.16);
+    border-radius:2px; }
+  #panel .reset:hover { background:rgba(255,255,255,.12); }
+  #panel::-webkit-scrollbar { width:5px; }
+  #panel::-webkit-scrollbar-thumb { background:rgba(70,255,154,.3); border-radius:3px; }
+
+  /* ---- CRT terminal overlay: scanlines + phosphor mask + vignette ---- */
+  .crt { position:fixed; inset:0; z-index:20; pointer-events:none; mix-blend-mode:multiply; }
+  .crt.lines {
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 1px,
+      rgba(0,0,0,.55) 2px,
+      rgba(0,0,0,.55) 3px);
+    opacity:.45;
+  }
+  .crt.mask {                                  /* faint aperture-grille tint */
+    background:repeating-linear-gradient(
+      to right,
+      rgba(255,0,0,.05), rgba(0,255,0,.04) 2px, rgba(0,0,255,.05) 3px);
+    mix-blend-mode:screen; opacity:.35;
+  }
+  .crt.vignette {
+    mix-blend-mode:multiply;
+    background:radial-gradient(ellipse at center,
+      rgba(255,255,255,1) 52%, rgba(255,255,255,.78) 76%, rgba(80,80,80,.55) 100%);
+  }
+  .crt.sweep {                                 /* slow rolling refresh bar */
+    background:linear-gradient(to bottom, rgba(120,255,180,0) 0%,
+      rgba(120,255,180,.06) 48%, rgba(120,255,180,.10) 50%,
+      rgba(120,255,180,.06) 52%, rgba(120,255,180,0) 100%);
+    height:38%; mix-blend-mode:screen; animation:roll 7.5s linear infinite;
+  }
+  @keyframes roll { 0%{ transform:translateY(-40%);} 100%{ transform:translateY(260%);} }
+  #app { animation:flicker 5.5s steps(60) infinite; }
+  @keyframes flicker {
+    0%,100%{ opacity:1; } 47%{ opacity:.985; } 48%{ opacity:.94; }
+    49%{ opacity:.99; } 71%{ opacity:.97; } 72%{ opacity:1; }
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="crt mask"></div>
+  <div class="crt sweep"></div>
+  <div class="crt lines"></div>
+  <div class="crt vignette"></div>
+  <div id="boot">SUMMONING SENTINELS…</div>
+
+  <div class="hud">
+    <h1>A S C I I &nbsp; S E N T I N E L S</h1>
+    <p class="sub">green guardians neutralize red — fluid drift, bomb fireworks, friendly fire</p>
+  </div>
+
+  <div class="stats" id="stats">
+    <div><span class="g" id="nSent">0</span> sentinels</div>
+    <div><span class="r" id="nEvil">0</span> red</div>
+    <div class="d"><span id="nFrag">0</span> fragments · <span id="nKill">0</span> neutralized</div>
+  </div>
+
+  <div class="legend">
+    <div><b style="color:var(--green)">green</b> = sentinel · protects + hunts</div>
+    <div><b style="color:var(--red)">red</b> = hostile · gets bombed</div>
+    <div>beam → bomb → <b>bloom</b> firework · shards bite friendlies</div>
+  </div>
+
+  <div class="ctl">
+    <button id="btnPulse">SHOCKWAVE</button>
+    <button id="btnSpawn">+ RED</button>
+    <button id="btnRot">SPIN: ON</button>
+  </div>
+
+  <div id="panel">
+    <div class="ph" id="panelHead"><span>P A R A M S</span><span class="x">–</span></div>
+    <div id="panelBody"></div>
+    <button class="reset" id="btnReset">RESET DEFAULTS</button>
+  </div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ----------------------------------------------------------------------------
+// World constants — the "glass"
+// ----------------------------------------------------------------------------
+const R        = 19;       // radius of the rotating-glass volume
+const MAX_FRAG = 1600;
+const MAX_BEAMS= 22;
+const CAP      = 600;      // hard ceiling per side (slider "infinite" stops here)
+
+// every live tunable — driven by the slider panel
+const params = {
+  fov:52, fog:14,                 // fog in thousandths (0.014) -> "depth of field"
+  bloomStrength:0.28, bloomRadius:0.40, bloomRes:1.0,
+  scanlines:0.45,
+  swirl:0.16, fluid:1.0, visc:0.045,
+  glyph:1.0, spin:0.35, fireRate:1.0,
+  sentinels:78, evils:26,          // standing population ceiling per side
+  sentBirth:1.6, evilBirth:1.4,    // spawns / second each side refills at
+};
+
+// ----------------------------------------------------------------------------
+// Renderer / scene / camera
+// ----------------------------------------------------------------------------
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x04060a, 1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.92;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x04060a, 0.014);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 400);
+camera.position.set(0, 6, 52);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 22;
+controls.maxDistance = 120;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.35;
+
+// ----------------------------------------------------------------------------
+// Post: bloom (the firework glow)
+// ----------------------------------------------------------------------------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.28, 0.4, 0.35);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// ----------------------------------------------------------------------------
+// Glyph sprite textures (cached per character+color-class)
+// ----------------------------------------------------------------------------
+const glyphCache = new Map();
+function glyphTexture(ch, hex) {
+  const key = ch + '|' + hex;
+  if (glyphCache.has(key)) return glyphCache.get(key);
+  const S = 128;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.clearRect(0,0,S,S);
+  g.font = '700 90px ui-monospace, Menlo, Consolas, monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  // crisp phosphor glyph: tight halo, solid body, faint hot center — no blob glow
+  g.shadowColor = hex; g.shadowBlur = 7;
+  g.fillStyle = hex;       g.fillText(ch, S/2, S/2+4);
+  g.shadowBlur = 0;
+  g.fillStyle = hex;       g.fillText(ch, S/2, S/2+4);   // solidify the body
+  g.fillStyle = '#dffbe9'; g.globalAlpha = 0.30; g.fillText(ch, S/2, S/2+4);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4; t.needsUpdate = true;
+  glyphCache.set(key, t);
+  return t;
+}
+
+const SENTINEL_GLYPHS = ['A','V','X','Y','#','W','M','§','Δ','λ','Ω','Ψ','¥','&'];
+const EVIL_GLYPHS     = ['x','%','&','@','$','#','¤','Ø','§','=','>','<','*'];
+const FRAG_GLYPHS     = ['.',':','*','+','·','’','`',',',';','^','"','~'];
+
+const GREEN = 0x46ff9a;
+const RED   = 0xff2f3e;
+const EMBER = ['#ff5a2a','#ff9b2e','#ffd24a','#ff2f3e','#ffe9c2'];
+
+function makeSprite(tex, size, additive=true) {
+  const m = new THREE.SpriteMaterial({
+    map: tex, transparent:true,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    depthWrite:false, depthTest:true,
+  });
+  const s = new THREE.Sprite(m);
+  s.scale.setScalar(size);
+  return s;
+}
+
+// ----------------------------------------------------------------------------
+// Perlin 3D noise -> curl noise (divergence-free == incompressible flow)
+// ----------------------------------------------------------------------------
+const perm = new Uint8Array(512);
+(function seedPerlin(){
+  const p = new Uint8Array(256);
+  for (let i=0;i<256;i++) p[i]=i;
+  let s = 1337;
+  const rnd = () => (s = (s*16807) % 2147483647) / 2147483647;
+  for (let i=255;i>0;i--){ const j=(rnd()*(i+1))|0; const t=p[i]; p[i]=p[j]; p[j]=t; }
+  for (let i=0;i<512;i++) perm[i]=p[i&255];
+})();
+const fade = t => t*t*t*(t*(t*6-15)+10);
+const lerp = (a,b,t) => a+t*(b-a);
+function grad(h,x,y,z){
+  h&=15; const u = h<8?x:y; const v = h<4?y:(h===12||h===14?x:z);
+  return ((h&1)===0?u:-u) + ((h&2)===0?v:-v);
+}
+function pnoise(x,y,z){
+  const X=Math.floor(x)&255, Y=Math.floor(y)&255, Z=Math.floor(z)&255;
+  x-=Math.floor(x); y-=Math.floor(y); z-=Math.floor(z);
+  const u=fade(x), v=fade(y), w=fade(z);
+  const A=perm[X]+Y, AA=perm[A]+Z, AB=perm[A+1]+Z;
+  const B=perm[X+1]+Y, BA=perm[B]+Z, BB=perm[B+1]+Z;
+  return lerp(
+    lerp(lerp(grad(perm[AA],x,y,z),   grad(perm[BA],x-1,y,z),   u),
+         lerp(grad(perm[AB],x,y-1,z), grad(perm[BB],x-1,y-1,z), u), v),
+    lerp(lerp(grad(perm[AA+1],x,y,z-1),   grad(perm[BA+1],x-1,y,z-1),   u),
+         lerp(grad(perm[AB+1],x,y-1,z-1), grad(perm[BB+1],x-1,y-1,z-1), u), v),
+    w);
+}
+// curl of a vector potential built from 3 decorrelated noise fields -> swirly,
+// volume-preserving velocity, the Navier-Stokes-ish "fluid" look.
+const O2 = [ 123.4, 234.5, 345.6];
+const O3 = [-432.1,-321.2,-210.3];
+const _curl = new THREE.Vector3();
+function curlNoise(px,py,pz,scale){
+  const e=0.12, x=px*scale, y=py*scale, z=pz*scale;
+  const dP3dy = (pnoise(x+O3[0], y+e+O3[1], z+O3[2]) - pnoise(x+O3[0], y-e+O3[1], z+O3[2]))/(2*e);
+  const dP2dz = (pnoise(x+O2[0], y+O2[1], z+e+O2[2]) - pnoise(x+O2[0], y+O2[1], z-e+O2[2]))/(2*e);
+  const dP1dz = (pnoise(x,       y,       z+e      ) - pnoise(x,       y,       z-e      ))/(2*e);
+  const dP3dx = (pnoise(x+e+O3[0], y+O3[1], z+O3[2]) - pnoise(x-e+O3[0], y+O3[1], z+O3[2]))/(2*e);
+  const dP2dx = (pnoise(x+e+O2[0], y+O2[1], z+O2[2]) - pnoise(x-e+O2[0], y+O2[1], z+O2[2]))/(2*e);
+  const dP1dy = (pnoise(x, y+e, z) - pnoise(x, y-e, z))/(2*e);
+  return _curl.set(dP3dy - dP2dz, dP1dz - dP3dx, dP2dx - dP1dy);
+}
+
+// ----------------------------------------------------------------------------
+// Entity pools
+// ----------------------------------------------------------------------------
+const sentinels = [];
+const evils     = [];
+const frags     = [];
+const beams     = [];
+let kills = 0;
+
+const _v = new THREE.Vector3();
+const _w = new THREE.Vector3();
+
+function randInSphere(rad){
+  const u = Math.random(), v = Math.random(), t = Math.random()*Math.PI*2;
+  const r = rad * Math.cbrt(u);
+  const ph = Math.acos(2*v-1);
+  return new THREE.Vector3(
+    r*Math.sin(ph)*Math.cos(t),
+    r*Math.cos(ph)*0.65,           // squashed in Y -> disc-of-glass feel
+    r*Math.sin(ph)*Math.sin(t));
+}
+const pick = a => a[(Math.random()*a.length)|0];
+
+function spawnSentinel(pos){
+  const ch  = pick(SENTINEL_GLYPHS);
+  const spr = makeSprite(glyphTexture(ch, '#46ff9a'), 1.7 + Math.random()*0.7, false);
+  spr.position.copy(pos || randInSphere(R*0.92));
+  scene.add(spr);
+  sentinels.push({
+    spr, vel:new THREE.Vector3(), type:'sentinel',
+    health:100, cooldown:1+Math.random()*4, hit:0,
+    phase:Math.random()*6.28, base:spr.scale.x,
+  });
+}
+function spawnEvil(pos){
+  const ch  = pick(EVIL_GLYPHS);
+  const spr = makeSprite(glyphTexture(ch, '#ff2f3e'), 1.9 + Math.random()*0.8, false);
+  spr.position.copy(pos || randInSphere(R*0.85));
+  scene.add(spr);
+  evils.push({
+    spr, vel:new THREE.Vector3(), type:'evil',
+    targeted:false, phase:Math.random()*6.28, base:spr.scale.x, ch,
+  });
+}
+
+function detonate(x,y,z, seedGlyph){
+  // the ASCII bomb bursts into a firework of shard-glyphs
+  const count = 26 + (Math.random()*14|0);
+  for (let i=0;i<count && frags.length<MAX_FRAG;i++){
+    const ch  = Math.random()<0.4 ? (seedGlyph||pick(FRAG_GLYPHS)) : pick(FRAG_GLYPHS);
+    const col = pick(EMBER);
+    const spr = makeSprite(glyphTexture(ch, col), 0.8 + Math.random()*1.3);
+    spr.position.set(x,y,z);
+    scene.add(spr);
+    // radial outward velocity + jitter -> firework spread
+    const dir = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+    const spd = 9 + Math.random()*16;
+    frags.push({
+      spr, vel:dir.multiplyScalar(spd),
+      life:1, decay:0.5+Math.random()*0.7,
+      harmful:true, base:spr.scale.x, spin:(Math.random()-0.5)*4,
+    });
+  }
+}
+
+function fireBeam(sen, ev){
+  if (beams.length >= MAX_BEAMS) return;
+  ev.targeted = true;
+  // connecting line: a thin additive cylinder, redrawn each frame as it charges
+  const geo = new THREE.CylinderGeometry(0.07, 0.07, 1, 6, 1, true);
+  const mat = new THREE.MeshBasicMaterial({ color:0xbfffe0, transparent:true,
+    opacity:0.0, blending:THREE.AdditiveBlending, depthWrite:false });
+  const tube = new THREE.Mesh(geo, mat);
+  scene.add(tube);
+  // travelling bomb-bolt
+  const bolt = makeSprite(glyphTexture(pick(['◆','●','✦','*','#']), '#eafff2'), 2.2);
+  bolt.position.copy(sen.spr.position);
+  scene.add(bolt);
+  beams.push({ sen, ev, tube, mat, bolt, t:0, dur:0.45 });
+}
+
+// ----------------------------------------------------------------------------
+// Populate
+// ----------------------------------------------------------------------------
+for (let i=0;i<params.sentinels;i++) spawnSentinel();
+for (let i=0;i<params.evils;i++)     spawnEvil();
+
+// faint dust for depth
+(function dust(){
+  const n=900, pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){ const p=randInSphere(R*2.2); pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=p.z; }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({ color:0x2a3a4a, size:0.12, transparent:true,
+    opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false });
+  scene.add(new THREE.Points(g,m));
+})();
+
+// ----------------------------------------------------------------------------
+// Motion field: curl-noise drift + rigid swirl (rotating-glass viscosity)
+// ----------------------------------------------------------------------------
+function applyFluid(e, dt, time, energy){
+  const p = e.spr.position;
+  // target velocity = curl drift + rigid rotation about Y
+  curlNoise(p.x, p.y, p.z + time*0.05, 0.06);
+  _v.copy(_curl).multiplyScalar(6.5 * params.fluid * energy);
+  // omega × r  with omega = (0, params.swirl, 0)
+  _w.set(p.z*params.swirl, 0, -p.x*params.swirl);
+  _v.add(_w);
+  // a gentle pull to keep things from settling at the rim
+  _v.addScaledVector(p, -0.012);
+  // viscosity: ease current velocity toward the target (thick-fluid lag)
+  e.vel.lerp(_v, params.visc);
+  p.addScaledVector(e.vel, dt);
+  // soft containment inside the glass
+  const d = p.length();
+  if (d > R){ p.multiplyScalar(R/d); e.vel.multiplyScalar(0.4); }
+}
+
+// ----------------------------------------------------------------------------
+// Main loop
+// ----------------------------------------------------------------------------
+const clock = new THREE.Clock();
+
+const elS=document.getElementById('nSent'), elE=document.getElementById('nEvil'),
+      elF=document.getElementById('nFrag'), elK=document.getElementById('nKill');
+
+function tick(){
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const time = clock.elapsedTime;
+
+  // --- sentinels: drift + hunt ---
+  for (let i=sentinels.length-1; i>=0; i--){
+    const s = sentinels[i];
+    applyFluid(s, dt, time, 1);
+    s.cooldown -= dt;
+    s.hit = Math.max(0, s.hit - dt*2.2);
+    // pulse + hit-flash
+    const pulse = 1 + 0.08*Math.sin(time*2.4 + s.phase) + s.hit*0.5;
+    s.spr.scale.setScalar(s.base * pulse * params.glyph);
+    s.spr.material.color.setHex(s.hit>0.01 ? 0xffffff : GREEN);
+
+    if (s.cooldown<=0 && evils.length){
+      // nearest un-spoken-for evil (fall back to any)
+      let best=null, bd=1e9, anyD=1e9, any=null;
+      for (const ev of evils){
+        const d = s.spr.position.distanceTo(ev.spr.position);
+        if (d<anyD){ anyD=d; any=ev; }
+        if (!ev.targeted && d<bd){ bd=d; best=ev; }
+      }
+      const tgt = best || any;
+      if (tgt){ fireBeam(s, tgt); s.cooldown = (2.4 + Math.random()*3.5) / params.fireRate; }
+    }
+  }
+
+  // --- evils: drift, jitter harder ---
+  for (const ev of evils){
+    applyFluid(ev, dt, time*1.3, 1.25);
+    const pulse = 1 + 0.12*Math.sin(time*3.1 + ev.phase);
+    ev.spr.scale.setScalar(ev.base * pulse * params.glyph);
+  }
+
+  // --- beams: charge the line, fly the bolt, then detonate ---
+  for (let i=beams.length-1; i>=0; i--){
+    const b = beams[i];
+    b.t += dt;
+    const k = Math.min(b.t / b.dur, 1);
+    const a = b.sen.spr.position, c = b.ev.spr.position;
+    // orient + stretch tube between the two glyphs
+    _v.subVectors(c, a); const len = _v.length();
+    b.tube.position.copy(a).addScaledVector(_v, 0.5);
+    b.tube.scale.set(1, len, 1);
+    b.tube.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), _v.clone().normalize());
+    b.mat.opacity = (k<0.5 ? k*2 : (1-k)*2) * 0.9;
+    // bomb-bolt travels sentinel -> target
+    b.bolt.position.copy(a).addScaledVector(_v, k);
+    b.bolt.material.opacity = 1 - k*0.3;
+    b.bolt.scale.setScalar(2.2 + Math.sin(b.t*30)*0.4);
+
+    if (k>=1){
+      const ei = evils.indexOf(b.ev);
+      if (ei>=0){
+        const p = b.ev.spr.position;
+        detonate(p.x, p.y, p.z, b.ev.ch);
+        scene.remove(b.ev.spr); b.ev.spr.material.dispose();
+        evils.splice(ei,1); kills++;
+      }
+      scene.remove(b.tube); b.tube.geometry.dispose(); b.mat.dispose();
+      scene.remove(b.bolt); b.bolt.material.dispose();
+      beams.splice(i,1);
+    }
+  }
+
+  // --- fragments: firework spread + decay + friendly fire ---
+  for (let i=frags.length-1; i>=0; i--){
+    const f = frags[i];
+    f.life -= dt * f.decay;
+    if (f.life<=0){ scene.remove(f.spr); f.spr.material.dispose(); frags.splice(i,1); continue; }
+    f.vel.multiplyScalar(0.965);                 // air drag
+    f.vel.y -= 1.6*dt;                            // a little gravity drift
+    f.spr.position.addScaledVector(f.vel, dt);
+    f.spr.material.opacity = Math.min(1, f.life*1.4);
+    f.spr.scale.setScalar(f.base * (0.4 + f.life*0.9));
+
+    // shards bite nearby green sentinels (the "may harm friendlies")
+    if (f.harmful && f.life>0.3){
+      for (let j=sentinels.length-1; j>=0; j--){
+        const s = sentinels[j];
+        const d = f.spr.position.distanceTo(s.spr.position);
+        if (d < 1.6){
+          s.health -= 26; s.hit = 1; f.harmful=false; f.life*=0.6;
+          if (s.health<=0){
+            const p=s.spr.position;
+            detonate(p.x,p.y,p.z);              // a felled sentinel bursts too
+            for (let g=frags.length-1; g>=frags.length-12 && g>=0; g--) frags[g].harmful=false; // its shards are inert
+            scene.remove(s.spr); s.spr.material.dispose();
+            sentinels.splice(j,1);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // --- keep the war going: each side births toward its ceiling at its rate ---
+  function regulate(arr, removeOne, spawnOne, ceil, rate, accKey){
+    ceil = Math.min(ceil, CAP);
+    if (arr.length > ceil){                       // over ceiling -> retire extras
+      const e = arr.pop(); scene.remove(e.spr); e.spr.material.dispose();
+    } else if (arr.length < ceil){                // under ceiling -> birth at rate
+      regulate[accKey] = (regulate[accKey]||0) + dt*rate;
+      while (regulate[accKey] >= 1 && arr.length < ceil){ regulate[accKey]--; spawnOne(); }
+    }
+  }
+  regulate(evils,     null, spawnEvil,     params.evils,     params.evilBirth, '_e');
+  regulate(sentinels, null, spawnSentinel, params.sentinels, params.sentBirth, '_s');
+
+  // live optics
+  if (camera.fov !== params.fov){ camera.fov = params.fov; camera.updateProjectionMatrix(); }
+  scene.fog.density = params.fog / 1000;            // "depth of field" haze
+  controls.autoRotateSpeed = params.spin;
+  bloom.strength = params.bloomStrength;
+  bloom.radius   = params.bloomRadius;
+
+  controls.update();
+  composer.render();
+
+  elS.textContent=sentinels.length; elE.textContent=evils.length;
+  elF.textContent=frags.length; elK.textContent=kills;
+  requestAnimationFrame(tick);
+}
+
+// ----------------------------------------------------------------------------
+// Controls / UI
+// ----------------------------------------------------------------------------
+function applyBloomRes(){ bloom.setSize(innerWidth*params.bloomRes, innerHeight*params.bloomRes); }
+function applyScan(){ document.querySelector('.crt.lines').style.opacity = params.scanlines; }
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  applyBloomRes();
+});
+
+document.getElementById('btnSpawn').onclick = () => {
+  params.evils = Math.min(CAP, params.evils + 8);
+  for (let i=0;i<8 && evils.length<CAP;i++) spawnEvil();          // instant, then ceiling holds them
+  const s = SLIDERS.find(x=>x.k==='evils'); if (s){ s._inp.value = params.evils; valEls.evils(); }
+};
+document.getElementById('btnRot').onclick = (e) => {
+  controls.autoRotate = !controls.autoRotate;
+  e.target.textContent = 'SPIN: ' + (controls.autoRotate?'ON':'OFF');
+};
+document.getElementById('btnPulse').onclick = () => {
+  // shove everything outward + boost the flow briefly
+  for (const e of [...sentinels, ...evils]){
+    e.vel.addScaledVector(e.spr.position.clone().normalize(), 22);
+  }
+  const keep = params.fluid; params.fluid = 2.6; setTimeout(()=>params.fluid=keep, 900);
+};
+
+// ----------------------------------------------------------------------------
+// Slider panel — everything is live & uncapped (infinite up to CAP)
+// ----------------------------------------------------------------------------
+const SLIDERS = [
+  {k:'fov',          lab:'FOV',             min:20,  max:120, step:1,    fmt:v=>v+'°'},
+  {k:'fog',          lab:'DEPTH OF FIELD',  min:0,   max:60,  step:1,    fmt:v=>(v/1000).toFixed(3)},
+  {k:'bloomRes',     lab:'BLUR RESOLUTION', min:0.1, max:1.5, step:0.05, fmt:v=>v.toFixed(2)+'x', on:applyBloomRes},
+  {k:'bloomStrength',lab:'BLOOM',           min:0,   max:1.6, step:0.02, fmt:v=>v.toFixed(2)},
+  {k:'bloomRadius',  lab:'BLOOM SPREAD',    min:0,   max:1.5, step:0.02, fmt:v=>v.toFixed(2)},
+  {k:'scanlines',    lab:'SCANLINES',       min:0,   max:1,   step:0.02, fmt:v=>v.toFixed(2), on:applyScan},
+  {k:'swirl',        lab:'GLASS SWIRL',     min:0,   max:0.6, step:0.01, fmt:v=>v.toFixed(2)},
+  {k:'fluid',        lab:'FLUID FLOW',      min:0,   max:3,   step:0.05, fmt:v=>v.toFixed(2)},
+  {k:'visc',         lab:'RESPONSE (1/visc)',min:0.005,max:0.2,step:0.005,fmt:v=>v.toFixed(3)},
+  {k:'glyph',        lab:'GLYPH SIZE',      min:0.4, max:2.6, step:0.05, fmt:v=>v.toFixed(2)+'x'},
+  {k:'spin',         lab:'CAMERA SPIN',     min:0,   max:2,   step:0.05, fmt:v=>v.toFixed(2)},
+  {k:'fireRate',     lab:'FIRE RATE',       min:0.2, max:6,   step:0.1,  fmt:v=>v.toFixed(1)+'x'},
+  {k:'sentinels',    lab:'GREEN POPULATION',min:0,   max:CAP, step:1,    fmt:v=>v|0},
+  {k:'sentBirth',    lab:'GREEN BIRTH / s', min:0,   max:40,  step:0.5,  fmt:v=>v.toFixed(1), side:'green'},
+  {k:'evils',        lab:'RED POPULATION',  min:0,   max:CAP, step:1,    fmt:v=>v|0, side:'red'},
+  {k:'evilBirth',    lab:'RED BIRTH / s',   min:0,   max:40,  step:0.5,  fmt:v=>v.toFixed(1), side:'red'},
+];
+const DEFAULTS = JSON.parse(JSON.stringify(params));
+const body = document.getElementById('panelBody');
+const valEls = {};
+for (const s of SLIDERS){
+  const row = document.createElement('div');
+  row.className = 'row' + (s.side==='red' ? ' red' : '');
+  row.innerHTML = `<div class="lab"><span>${s.lab}</span><span class="val"></span></div>`;
+  const inp = document.createElement('input');
+  inp.type='range'; inp.min=s.min; inp.max=s.max; inp.step=s.step; inp.value=params[s.k];
+  const val = row.querySelector('.val');
+  valEls[s.k] = () => { val.textContent = s.fmt(params[s.k]); };
+  inp.addEventListener('input', () => {
+    params[s.k] = parseFloat(inp.value); valEls[s.k](); if (s.on) s.on();
+  });
+  valEls[s.k]();
+  row.appendChild(inp); body.appendChild(row);
+  s._inp = inp;
+}
+document.getElementById('panelHead').onclick = (e) => {
+  const p = document.getElementById('panel'); p.classList.toggle('collapsed');
+  e.currentTarget.querySelector('.x').textContent = p.classList.contains('collapsed') ? '+' : '–';
+};
+document.getElementById('btnReset').onclick = () => {
+  Object.assign(params, JSON.parse(JSON.stringify(DEFAULTS)));
+  for (const s of SLIDERS){ s._inp.value = params[s.k]; valEls[s.k](); }
+  applyBloomRes(); applyScan();
+};
+applyBloomRes(); applyScan();
+
+document.getElementById('boot').remove();
+tick();
+</script>
+</body>
+</html>

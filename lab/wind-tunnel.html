@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Wind Tunnel · VIBE CODING NIGHT</title>
+<style>
+  /* default: VCN bright-mint field, black ink that bleeds into the negative space */
+  :root{ --bg:#6CF29A; --fg:#04140b; --bleed:#04140b; --ink:#04140b; }
+  body.term{ --bg:#04120a; --fg:#7CF59C; --bleed:#7CF59C; --ink:#9CFFC0; }  /* inverted terminal mode */
+
+  html,body{
+    margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    overflow:hidden;transition:background .35s ease,color .35s ease;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;cursor:crosshair;}
+  pre#screen{
+    margin:0;line-height:1.0;white-space:pre;user-select:none;font-weight:600;
+    /* "bleeding bloom from the space" — ink halates softly into the field */
+    text-shadow:0 0 1px var(--bleed),0 0 4px var(--bleed),0 0 9px var(--bleed);
+    transition:text-shadow .35s ease;
+  }
+  body.term pre#screen{ text-shadow:0 0 3px var(--bleed),0 0 8px var(--bleed),0 0 16px var(--bleed); }
+
+  #ui{
+    position:fixed;top:12px;left:14px;z-index:5;font-size:12px;letter-spacing:.04em;
+    color:var(--fg);opacity:.85;line-height:1.6;mix-blend-mode:multiply;
+  }
+  body.term #ui{ mix-blend-mode:normal; }
+  #ui b{font-weight:700;letter-spacing:.12em;}
+  #hud{font-size:11px;opacity:.7;margin-top:2px;}
+  #swap{
+    font:inherit;font-size:11px;font-weight:600;letter-spacing:.12em;cursor:pointer;
+    margin-top:8px;padding:5px 11px;border-radius:6px;
+    background:transparent;color:var(--fg);border:1px solid currentColor;opacity:.85;
+  }
+  #swap:hover,#ns:hover{opacity:1;}
+  #ns{
+    font:inherit;font-size:11px;font-weight:600;letter-spacing:.12em;cursor:pointer;
+    margin-top:8px;margin-left:8px;padding:5px 11px;border-radius:6px;
+    background:transparent;color:var(--fg);border:1px solid currentColor;opacity:.85;
+  }
+  #ns.on{ background:var(--fg);color:var(--bg); }   /* filled = incompressible solve live */
+
+  .fxrow{margin-top:11px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .fxlbl{font-size:10px;letter-spacing:.14em;opacity:.6;margin-right:2px;}
+  .fxbtn{
+    font:inherit;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;
+    padding:4px 9px;border-radius:6px;background:transparent;color:var(--fg);
+    border:1px solid currentColor;opacity:.6;
+  }
+  .fxbtn:hover{opacity:.95;}
+  .fxbtn.on{background:var(--fg);color:var(--bg);opacity:1;}
+  .brushrow{margin-top:10px;display:flex;align-items:center;gap:9px;font-size:11px;opacity:.85;letter-spacing:.06em;}
+  #brush{accent-color:var(--fg);width:128px;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="stage"><pre id="screen"></pre></div>
+<div id="ui">
+  <b>WIND TUNNEL // the words are the obstacle</b><br>
+  move the mouse to disturb the flow &nbsp;·&nbsp; click = stamp &nbsp;·&nbsp; space = clear<br>
+  <span id="hud"></span><br>
+  <button id="swap">INVERT ▸ TERMINAL</button>
+  <button id="ns">NAVIER–STOKES ▸ ON</button>
+  <div class="fxrow">
+    <span class="fxlbl">BRUSH</span>
+    <button class="fxbtn on" data-fx="drag">DRAG</button>
+    <button class="fxbtn" data-fx="swirl">SWIRL</button>
+    <button class="fxbtn" data-fx="blow">BLOW</button>
+    <button class="fxbtn" data-fx="smoke">SMOKE</button>
+  </div>
+  <div class="brushrow">
+    <span>SIZE</span>
+    <input id="brush" type="range" min="2" max="34" value="12">
+    <span id="brushval">12</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ASCII WIND TUNNEL — VIBE CODING NIGHT
+   Jos Stam's Stable Fluids (semi-Lagrangian advection +
+   Gauss–Seidel pressure projection) with a STEADY INFLOW.
+   The SOLID OBSTACLE is the three stacked words VIBE / CODING /
+   NIGHT, rasterized from a heavy 900-weight typeface into the
+   no-slip cell mask. The wind cannot enter the glyphs, so it
+   accelerates through the counters, bends around the stems, and
+   sheds a wake off every trailing edge. Dye streaklines injected
+   at the inlet make the flow legible.
+   ============================================================ */
+const screenEl = document.getElementById('screen');
+const stage    = document.getElementById('stage');
+const hud      = document.getElementById('hud');
+
+let N, W, H, CELL_W, CELL_H, ASPECT;            // ASPECT = CELL_H/CELL_W (screen px per grid cell)
+const RAMP = " .·:-=+oxX#%@";                   // light field → dense ink
+const RAMP_LEN = RAMP.length;
+const ARROWS = ['→','↗','↑','↖','←','↙','↓','↘'];
+const WALL_CH = '█';                            // solid letterform cell
+
+const LINES = ['VIBE CODING','NIGHTS'];         // the obstacle — VIBE CODING / NIGHTS
+
+let size, u, v, u0, v0, dens, dens0, solid;
+let NS=true;                                    // incompressible pressure-projection: the Navier–Stokes switch
+let TICK=0;                                      // frame counter — drives the unsteady (turbulent) inlet
+const VISC=0.0, dt=0.14, ITER=14;
+/* WIND is a grid velocity: advection back-traces dt*N*WIND cells/frame, so this
+   must stay small (~a few cells) or the flow teleports and turns to noise. */
+const WIND = 0.26;                              // stronger tunnel
+
+function IX(x,y){ return x + (N+2)*y; }
+function allocate(){
+  size=(N+2)*(N+2);
+  u=new Float32Array(size); v=new Float32Array(size);
+  u0=new Float32Array(size); v0=new Float32Array(size);
+  dens=new Float32Array(size); dens0=new Float32Array(size);
+  solid=new Uint8Array(size);
+}
+
+// ---- solver primitives (Stam) ----
+function addSource(x,s){ for(let i=0;i<size;i++) x[i]+=dt*s[i]; }
+function setBnd(b,x){
+  for(let i=1;i<=N;i++){
+    x[IX(0,i)]  =b===1?-x[IX(1,i)]:x[IX(1,i)];
+    x[IX(N+1,i)]=b===1? x[IX(N,i)]:x[IX(N,i)];   // right edge = zero-gradient (open outflow)
+    x[IX(i,0)]  =b===2?-x[IX(i,1)]:x[IX(i,1)];
+    x[IX(i,N+1)]=b===2?-x[IX(i,N)]:x[IX(i,N)];
+  }
+  x[IX(0,0)]    =0.5*(x[IX(1,0)]+x[IX(0,1)]);
+  x[IX(0,N+1)]  =0.5*(x[IX(1,N+1)]+x[IX(0,N)]);
+  x[IX(N+1,0)]  =0.5*(x[IX(N,0)]+x[IX(N+1,1)]);
+  x[IX(N+1,N+1)]=0.5*(x[IX(N,N+1)]+x[IX(N+1,N)]);
+}
+function linSolve(b,x,x0,a,c){
+  const invc=1/c;
+  for(let k=0;k<ITER;k++){
+    for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+      if(solid[IX(i,j)]){ x[IX(i,j)]=0; continue; }
+      x[IX(i,j)]=(x0[IX(i,j)]+a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))*invc;
+    }
+    setBnd(b,x);
+  }
+}
+function diffuse(b,x,x0,diff){ const a=dt*diff*N*N; linSolve(b,x,x0,a,1+4*a); }
+function advect(b,d,d0,uu,vv){
+  const dt0=dt*N;
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    if(solid[IX(i,j)]){ d[IX(i,j)]=0; continue; }
+    let x=i-dt0*uu[IX(i,j)], y=j-dt0*vv[IX(i,j)];
+    if(x<0.5)x=0.5; if(x>N+0.5)x=N+0.5; const i0=x|0,i1=i0+1;
+    if(y<0.5)y=0.5; if(y>N+0.5)y=N+0.5; const j0=y|0,j1=j0+1;
+    const s1=x-i0,s0=1-s1,t1=y-j0,t0=1-t1;
+    d[IX(i,j)]=s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+  }
+  setBnd(b,d);
+}
+function project(uu,vv,p,div){
+  const h=1/N;
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    div[IX(i,j)]=-0.5*h*(uu[IX(i+1,j)]-uu[IX(i-1,j)]+vv[IX(i,j+1)]-vv[IX(i,j-1)]);
+    p[IX(i,j)]=0;
+  }
+  setBnd(0,div); setBnd(0,p); linSolve(0,p,div,1,4);
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    if(solid[IX(i,j)])continue;
+    uu[IX(i,j)]-=0.5*(p[IX(i+1,j)]-p[IX(i-1,j)])/h;
+    vv[IX(i,j)]-=0.5*(p[IX(i,j+1)]-p[IX(i,j-1)])/h;
+  }
+  setBnd(1,uu); setBnd(2,vv);
+}
+
+// no-slip walls + steady inlet + open outflow, re-asserted every step
+function constrain(){
+  for(let j=0;j<=N+1;j++)for(let i=0;i<=N+1;i++){
+    if(solid[IX(i,j)]){ u[IX(i,j)]=0; v[IX(i,j)]=0; }
+  }
+  for(let j=1;j<=N;j++){
+    // inlet: drive the first two columns with an UNSTEADY (wavy) crossflow so the
+    // glyphs shed a turbulent wake instead of a clean laminar stream
+    const shear=WIND*(0.20*Math.sin(TICK*0.13+j*0.55)+0.11*Math.sin(TICK*0.061+j*0.21));
+    if(!solid[IX(1,j)]){ u[IX(1,j)]=WIND; v[IX(1,j)]=shear; }
+    if(!solid[IX(2,j)]){ u[IX(2,j)]=WIND; v[IX(2,j)]=shear*0.8; }
+    // outflow: zero-gradient on the right so the wake leaves cleanly
+    u[IX(N+1,j)]=u[IX(N,j)]; v[IX(N+1,j)]=v[IX(N,j)];
+  }
+}
+function velStep(){
+  // body force: gently relax the open field back toward the wind so it never stalls
+  for(let i=1;i<=N;i++)for(let j=1;j<=N;j++){
+    if(solid[IX(i,j)])continue;
+    u0[IX(i,j)]+=(WIND-u[IX(i,j)])*0.04;     // strong push downstream — powerful, directional flow
+    v0[IX(i,j)]+=(0-v[IX(i,j)])*0.05;        // damp vertical drift so the flow goes across, not up
+  }
+  addSource(u,u0); addSource(v,v0);
+  [u0,u]=[u,u0]; diffuse(1,u,u0,VISC);
+  [v0,v]=[v,v0]; diffuse(2,v,v0,VISC);
+  if(NS) project(u,v,u0,v0); constrain();        // projection = enforce incompressibility (the NS step)
+  [u0,u]=[u,u0]; [v0,v]=[v,v0];
+  advect(1,u,u0,u0,v0); advect(2,v,v0,u0,v0);
+  if(NS) project(u,v,u0,v0); constrain();
+}
+function densStep(){
+  addSource(dens,dens0);
+  [dens0,dens]=[dens,dens0]; advect(0,dens,dens0,u,v);
+}
+function clearSources(){ u0.fill(0); v0.fill(0); dens0.fill(0); }
+
+// ---- the obstacle: rasterize VIBE / CODING / NIGHT in a heavy face, mark cells solid ----
+// Drawn in SCREEN-pixel space (so the letters carry correct on-screen aspect), then each
+// grid cell samples the glyph alpha at its center → no-slip wall where the ink is.
+function buildTextMask(){
+  solid.fill(0);
+  const cw=Math.max(2,window.innerWidth), ch=Math.max(2,window.innerHeight);
+  const cvs=document.createElement('canvas'); cvs.width=cw; cvs.height=ch;
+  const ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,cw,ch);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const setFont=p=>ctx.font=`900 ${p}px "Arial Black","Helvetica Neue",Impact,"Segoe UI",sans-serif`;
+  const LINE_GAP=1.04;                          // tight stack so the three words read as one mass
+
+  let fontPx=Math.min(ch*0.24, cw*0.22);        // first guess
+  setFont(fontPx);
+  let maxw=0; for(const L of LINES) maxw=Math.max(maxw, ctx.measureText(L).width);
+  if(maxw>cw*0.84){ fontPx*=(cw*0.84)/maxw; setFont(fontPx); }     // fit the widest word
+  let totalH=fontPx*LINE_GAP*LINES.length;
+  if(totalH>ch*0.70){ fontPx*=(ch*0.70)/totalH; setFont(fontPx); } // fit the stack height
+
+  const lineH=fontPx*LINE_GAP;
+  const startY=ch/2 - lineH*(LINES.length-1)/2;
+  ctx.fillStyle='#fff';
+  ctx.shadowColor='#fff'; ctx.shadowBlur=Math.max(1,fontPx*0.015);  // hair dilation → no 1-cell gaps in stems
+  LINES.forEach((L,k)=> ctx.fillText(L, cw/2, Math.round(startY+k*lineH)));
+
+  const img=ctx.getImageData(0,0,cw,ch).data;
+  for(let j=1;j<=H;j++){
+    const py=Math.min(ch-1,Math.max(0,Math.round((j-0.5)*CELL_H)));
+    for(let i=1;i<=W;i++){
+      const px=Math.min(cw-1,Math.max(0,Math.round((i-0.5)*CELL_W)));
+      if(img[(py*cw+px)*4+3]>110) solid[IX(i,j)]=1;   // alpha over threshold = inside a glyph
+    }
+  }
+}
+
+// ---- render ----
+function render(){
+  let out='';
+  for(let j=1;j<=H;j++){
+    let line='';
+    for(let i=1;i<=W;i++){
+      if(solid[IX(i,j)]){ line+=WALL_CH; continue; }
+      const d=Math.min(1,dens[IX(i,j)]*0.95), vx=u[IX(i,j)], vy=v[IX(i,j)];
+      const idx=Math.min(RAMP_LEN-1,(d*(RAMP_LEN-1))|0);
+      if(idx<2 && (vx*vx+vy*vy)>0.012){         // streamline glyph where flow is fast but ink thin
+        const oct=Math.round(Math.atan2(-vy,vx)/(Math.PI/4))&7;
+        line+=ARROWS[(oct+8)%8];
+      } else line+=RAMP[idx];
+    }
+    out+=line+(j<H?'\n':'');
+  }
+  screenEl.textContent=out;
+}
+
+// ---- interaction: passive mouse movement brushes the fluid, four ways ----
+let fx='drag', brushR=12, lastX=null, lastY=null;
+
+/* All four effects deposit into the source arrays (u0,v0 velocity · dens0 dye)
+   over a circular brush of radius brushR cells with a smooth falloff.
+     drag  — push the smoke along the cursor's motion (stir)
+     swirl — tangential velocity → a vortex spinning about the cursor
+     blow  — radial velocity outward → a fan that shoves the field away
+     smoke — almost pure dye: paint smoke, let the wind carry it          */
+function applyBrush(cx,cy,mvx,mvy,mul){
+  const R=brushR, speed=Math.hypot(mvx,mvy);
+  for(let oj=-R;oj<=R;oj++)for(let oi=-R;oi<=R;oi++){
+    const i=cx+oi, j=cy+oj;
+    if(i<1||i>W||j<1||j>H||solid[IX(i,j)])continue;
+    const dist=Math.hypot(oi,oj); if(dist>R)continue;
+    const f=(1-dist/R)*(1-dist/R)*mul, k=IX(i,j), inv=dist>0.01?1/dist:0;
+    if(fx==='drag'){
+      u0[k]+=mvx*0.85*f; v0[k]+=mvy*0.85*f; dens0[k]+=(2+speed)*0.7*f;
+    } else if(fx==='swirl'){
+      u0[k]+=-oj*inv*5.5*f; v0[k]+= oi*inv*5.5*f; dens0[k]+=1.7*f;   // perpendicular = curl
+    } else if(fx==='blow'){
+      u0[k]+= oi*inv*5.5*f; v0[k]+= oj*inv*5.5*f; dens0[k]+=1.2*f;   // radial outward
+    } else { // smoke
+      dens0[k]+=9*f; u0[k]+=mvx*0.15*f; v0[k]+=mvy*0.15*f;
+    }
+  }
+}
+
+stage.addEventListener('pointermove', e=>{
+  const r=screenEl.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){ lastX=lastY=null; return; }
+  const gx=Math.floor((e.clientX-r.left)/(r.width /W))+1;
+  const gy=Math.floor((e.clientY-r.top )/(r.height/H))+1;
+  if(lastX===null){ lastX=e.clientX; lastY=e.clientY; }      // first sample: no phantom jump
+  const mvx=Math.max(-16,Math.min(16,(e.clientX-lastX)/CELL_W));
+  const mvy=Math.max(-16,Math.min(16,(e.clientY-lastY)/CELL_H));
+  applyBrush(gx,gy,mvx,mvy,1);
+  lastX=e.clientX; lastY=e.clientY;
+});
+// click = a strong stationary stamp of the current effect
+stage.addEventListener('pointerdown', e=>{
+  const r=screenEl.getBoundingClientRect();
+  const gx=Math.floor((e.clientX-r.left)/(r.width /W))+1;
+  const gy=Math.floor((e.clientY-r.top )/(r.height/H))+1;
+  applyBrush(gx,gy,0,0,3.2);
+});
+stage.addEventListener('contextmenu', e=>e.preventDefault());
+
+// effect selector + brush-size slider
+const fxBtns=[...document.querySelectorAll('.fxbtn')];
+fxBtns.forEach(b=>b.addEventListener('click', ()=>{
+  fx=b.dataset.fx; fxBtns.forEach(x=>x.classList.toggle('on', x===b));
+}));
+const brush=document.getElementById('brush'), brushVal=document.getElementById('brushval');
+function syncBrush(){ brushR=+brush.value; brushVal.textContent=brush.value; }
+brush.addEventListener('input', syncBrush); syncBrush();
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); u.fill(0);v.fill(0);dens.fill(0);clearSources(); }
+});
+
+// ---- inlet dye rake: continuous, well-separated smoke streaklines ----
+function seedRake(){
+  const streaks=Math.min(7,Math.max(4,Math.floor(H/16)));   // fewer nozzles
+  for(let s=0;s<streaks;s++){
+    const j=Math.round(((s+0.5)/streaks)*(H-2))+1;
+    if(!solid[IX(1,j)]) dens0[IX(1,j)]+=4;      // lighter dye so the field reads turbulent, not saturated
+  }
+}
+
+// ---- theme switch ----
+const swap=document.getElementById('swap');
+swap.addEventListener('click', ()=>{
+  const term=document.body.classList.toggle('term');
+  swap.textContent = term ? 'INVERT ▸ VCN GREEN' : 'INVERT ▸ TERMINAL';
+});
+
+// ---- Navier–Stokes switch: toggle the incompressible pressure-projection solve ----
+const nsBtn=document.getElementById('ns');
+nsBtn.classList.add('on');
+nsBtn.addEventListener('click', ()=>{
+  NS=!NS;
+  nsBtn.classList.toggle('on', NS);
+  nsBtn.textContent = NS ? 'NAVIER–STOKES ▸ ON' : 'NAVIER–STOKES ▸ OFF';
+  if(!NS){ u0.fill(0); v0.fill(0); }             // drop residual pressure correction on the way out
+});
+
+// ---- offscreen pause: parent posts vcn:pause / vcn:run as the iframe leaves / enters the viewport ----
+let __paused=false;
+addEventListener('message',e=>{ if(e.data==='vcn:pause')__paused=true; else if(e.data==='vcn:run')__paused=false; });
+
+// ---- main loop ----
+function frame(){
+  if(__paused){ requestAnimationFrame(frame); return; }   // idle cheaply while scrolled away
+  TICK++;                                         // advance the unsteady inlet
+  seedRake();                                    // obstacle is static — built once, not per frame
+  velStep(); densStep();
+  for(let i=0;i<size;i++) dens[i]*=0.965;         // faster fade so the field stays wispy, not saturated
+  clearSources(); render();
+  hud.textContent = `brush ${fx} r${brushR}  ·  ${NS?'incompressible':'advection-only'}  ·  ${W}×${H}`;
+  requestAnimationFrame(frame);
+}
+
+// ---- responsive layout ----
+function measureAndBuild(){
+  const fs=Math.max(8,Math.min(15,Math.floor(window.innerWidth/120)));
+  screenEl.style.fontSize=fs+'px';
+  const probe=document.createElement('pre');
+  probe.style.cssText='position:absolute;visibility:hidden;margin:0;line-height:1.0;white-space:pre;font-weight:600;';
+  probe.style.font=getComputedStyle(screenEl).font;
+  probe.textContent=Array.from({length:10},()=>'M'.repeat(50)).join('\n');
+  document.body.appendChild(probe);
+  const r=probe.getBoundingClientRect();
+  CELL_W=r.width/50; CELL_H=r.height/10; ASPECT=CELL_H/CELL_W; probe.remove();
+  W=Math.max(20,Math.floor(window.innerWidth /CELL_W)-1);
+  H=Math.max(20,Math.floor(window.innerHeight/CELL_H)-1);
+  N=Math.max(W,H);
+  allocate();
+  buildTextMask();                               // rasterize the words into the fresh grid
+}
+// when embedded in the site (iframe), drop the in-sim HUD — the page chrome carries the controls
+if(window.self!==window.top){ const u=document.getElementById('ui'); if(u) u.style.display='none'; document.body.classList.add('term'); }
+measureAndBuild();
+let rzTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(measureAndBuild,150); });
+frame();
+</script>
+</body>
+</html>

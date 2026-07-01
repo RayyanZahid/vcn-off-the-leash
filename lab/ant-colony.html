@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Ant Colony</title>
+<style>
+  :root{
+    --bg:#05070a;
+    --ent:#8affab;      /* ants + nest — mint */
+    --food:#ffd15a;     /* food source — amber */
+    --pfood:#ff4747;    /* to-food pheromone — bright red (the winning trail) */
+    --phome:#a83b1e;    /* to-home pheromone — dim ember */
+  }
+  body.green{
+    --bg:#7CF59C; --ent:#04140b; --food:#6b4300; --pfood:#b31414; --phome:#7a3410;
+  }
+  html,body{
+    margin:0;height:100%;background:var(--bg);
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    overflow:hidden;transition:background .35s ease;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;cursor:crosshair;}
+  #field{position:relative;}
+  #field pre{margin:0;line-height:1.0;white-space:pre;user-select:none;font-weight:600;}
+  #L1,#L2,#L3{position:absolute;top:0;left:0;}
+  #L0{position:relative;color:var(--phome);}
+  #L1{color:var(--pfood);text-shadow:0 0 4px var(--pfood),0 0 9px var(--pfood);}   /* red glow trail */
+  #L0{text-shadow:0 0 3px var(--phome);}
+  #L2{color:var(--food);text-shadow:0 0 4px var(--food),0 0 10px var(--food);}
+  #L3{color:var(--ent);text-shadow:0 0 3px var(--ent),0 0 8px var(--ent);}
+  body.green #field pre{text-shadow:none;}
+
+  #ui{
+    position:fixed;top:12px;left:14px;z-index:5;font-size:12px;letter-spacing:.04em;
+    color:var(--ent);opacity:.85;line-height:1.6;max-width:580px;
+    text-shadow:0 0 6px rgba(0,0,0,.6);
+  }
+  body.green #ui{color:#04140b;text-shadow:none;}
+  #ui b{font-weight:700;}
+  #hud{font-size:11px;opacity:.75;}
+  .legend span{margin-right:12px;font-size:10.5px;letter-spacing:.06em;}
+  .k-food{color:var(--food);} .k-pf{color:var(--pfood);} .k-ph{color:var(--phome);} .k-ant{color:var(--ent);}
+  .btn{
+    font:inherit;font-size:10px;letter-spacing:.1em;cursor:pointer;
+    padding:5px 10px;border-radius:6px;background:transparent;color:inherit;
+    border:1px solid currentColor;opacity:.72;
+  }
+  .btn:hover{opacity:1;}
+  .row{margin-top:9px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;}
+  .row .lbl{font-size:10px;letter-spacing:.14em;opacity:.6;}
+  input[type=range]{accent-color:var(--pfood);width:108px;cursor:pointer;vertical-align:middle;}
+  input.num{font:inherit;font-size:11px;width:62px;background:transparent;color:inherit;
+    border:1px solid currentColor;border-radius:5px;padding:3px 6px;opacity:.85;}
+  input.num:focus{opacity:1;outline:1px solid var(--pfood);}
+</style>
+</head>
+<body class="dark">
+<div id="stage"><div id="field">
+  <pre id="L0"></pre><pre id="L1"></pre><pre id="L2"></pre><pre id="L3"></pre>
+</div></div>
+<div id="ui">
+  <b>ANT COLONY // ascii</b> &nbsp; ant colony optimization<br>
+  <span id="hud"></span><br>
+  <span class="legend"><span class="k-ant">H nest &nbsp; o/@ ants</span> <span class="k-food">* food</span> <span class="k-pf">red = trail to food</span> <span class="k-ph">ember = trail home</span></span><br>
+  click = drop food &nbsp;·&nbsp; food depletes as it is carried home &nbsp;·&nbsp; the shortest red trail wins
+  <div class="row">
+    <button class="btn" id="scatter">SCATTER FOOD</button>
+    <button class="btn" id="reset">RESET</button>
+    <button class="btn" id="trails">TRAILS &#9656; ON</button>
+    <button class="btn" id="swap">SWITCH &#9656; VCN GREEN</button>
+  </div>
+  <div class="row">
+    <span class="lbl">TICK RATE</span>
+    <input id="tickr" type="range" min="0.5" max="60" step="0.5" value="30">
+    <input id="tickn" class="num" type="number" min="0.1" max="240" step="0.1" value="30">
+    <span class="lbl">ticks/sec</span>
+  </div>
+  <div class="row">
+    <span class="lbl">ANTS</span><input id="ants" type="range" min="40" max="600" value="240"><span id="antval">240</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ASCII ANT COLONY — ant colony optimization (ACO), the ant algorithm.
+   Searchers leave the nest and follow the to-food pheromone (RED). When
+   one hits a food source it becomes a carrier, picks up a unit (so the
+   source visibly shrinks and eventually vanishes), and homes back laying
+   red to-food pheromone. Both fields evaporate every tick, so only routes
+   that keep getting walked survive and the SHORTEST path reinforces into
+   a bright red highway. Four colour layers: mint ants/nest, amber food,
+   red to-food trail, ember to-home trail.
+   ============================================================ */
+const L0=document.getElementById('L0'), L1=document.getElementById('L1'),
+      L2=document.getElementById('L2'), L3=document.getElementById('L3');
+const field=document.getElementById('field');
+const stage=document.getElementById('stage');
+const hud=document.getElementById('hud');
+
+let W,H,CELL_W,CELL_H;
+let toFood,toHome,food;
+let ants=[], nest={x:0,y:0}, delivered=0, wantAnts=240, showTrails=true;
+
+const RAMP=" .:-=+*o#";
+const RAMP_LEN=RAMP.length;
+const DIRS=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+const EVAP=0.99;            // slower evaporation -> trails persist and read clearly
+const DEPO=1.0;
+const DECAY=0.988;
+const FOOD_AMT=22;         // units per cell — small so a source is consumed and disappears
+
+let tps=30, acc=0, lastT=0;   // ticks per second (float), time-accumulated stepping
+
+function IX(x,y){ return y*W+x; }
+function inb(x,y){ return x>=0&&x<W&&y>=0&&y<H; }
+function setNest(){ nest={x:(W*0.5)|0, y:(H*0.5)|0}; }
+function alloc(){ const n=W*H; toFood=new Float32Array(n); toHome=new Float32Array(n); food=new Uint16Array(n); }
+
+function seedAnts(){
+  ants=[];
+  for(let i=0;i<wantAnts;i++) ants.push({x:nest.x,y:nest.y,h:(Math.random()*8)|0,carry:false,s:DEPO});
+}
+function dropFood(cx,cy,r=3,amt=FOOD_AMT){
+  for(let oy=-r;oy<=r;oy++)for(let ox=-r;ox<=r;ox++){
+    const x=cx+ox,y=cy+oy; if(!inb(x,y))continue;
+    if(Math.hypot(ox,oy)<=r) food[IX(x,y)]=Math.min(65535, food[IX(x,y)]+amt);
+  }
+}
+function scatterFood(){
+  for(let k=0;k<4;k++){
+    const x=(6+Math.random()*(W-12))|0, y=(6+Math.random()*(H-12))|0;
+    if(Math.hypot(x-nest.x,y-nest.y) > Math.min(W,H)*0.22) dropFood(x,y);
+  }
+}
+
+// ---- one simulation tick ----
+function step(){
+  for(let i=0;i<toFood.length;i++){ toFood[i]*=EVAP; toHome[i]*=EVAP; }
+  for(const a of ants){
+    const here=IX(a.x,a.y);
+    if(a.carry) toFood[here]+=a.s; else toHome[here]+=a.s;
+    a.s*=DECAY;
+
+    const follow = a.carry ? toHome : toFood;
+    let total=0; const scores=[];
+    for(let d=-1;d<=1;d++){
+      const hh=((a.h+d)%8+8)%8, dx=DIRS[hh][0], dy=DIRS[hh][1];
+      const nx=a.x+dx, ny=a.y+dy;
+      let sc=0.02+Math.random()*0.05;
+      if(inb(nx,ny)){
+        sc += follow[IX(nx,ny)]*3.2;
+        if(a.carry){                              // carriers have a weak homing instinct
+          const tox=nest.x-a.x, toy=nest.y-a.y, Ln=Math.hypot(tox,toy)||1;
+          sc += Math.max(0,(dx*tox+dy*toy)/Ln)*0.9;
+        }
+      } else sc=-1;
+      scores.push({hh,sc,nx,ny}); total+=Math.max(0,sc);
+    }
+    let pick=null;
+    if(total>0){ let r=Math.random()*total; for(const c of scores){ if(c.sc>0){ r-=c.sc; if(r<=0){pick=c;break;} } } }
+    if(!pick){ a.h=(a.h+4+(((Math.random()*3)|0)-1)+8)%8; continue; }
+    a.h=pick.hh; a.x=pick.nx; a.y=pick.ny;
+
+    const id=IX(a.x,a.y);
+    if(!a.carry && food[id]>0){ food[id]--; a.carry=true; a.s=DEPO; a.h=(a.h+4)%8; }
+    else if(a.carry && Math.abs(a.x-nest.x)<=1 && Math.abs(a.y-nest.y)<=1){ a.carry=false; a.s=DEPO; a.h=(a.h+4)%8; delivered++; }
+  }
+}
+
+// ---- layered render (one non-space glyph per cell, per priority) ----
+function render(){
+  const antAt=new Map();
+  for(const a of ants) antAt.set(IX(a.x,a.y), a.carry?'@':'o');
+  let s0='',s1='',s2='',s3='';
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const id=IX(x,y);
+      let c0=' ',c1=' ',c2=' ',c3=' ';
+      if(x===nest.x && y===nest.y) c3='H';
+      else if(antAt.has(id)) c3=antAt.get(id);
+      else if(food[id]>0){ const f=food[id]; c2 = f>16?'#':f>9?'*':f>3?'+':'.'; }   // shrinks as consumed
+      else if(showTrails){
+        const pf=toFood[id], ph=toHome[id];
+        if(pf>0.05 && pf>=ph) c1=RAMP[Math.min(RAMP_LEN-1,(pf*2.4)|0)];
+        else if(ph>0.05)      c0=RAMP[Math.min(RAMP_LEN-1,(ph*2.4)|0)];
+      }
+      s0+=c0; s1+=c1; s2+=c2; s3+=c3;
+    }
+    if(y<H-1){ s0+='\n';s1+='\n';s2+='\n';s3+='\n'; }
+  }
+  L0.textContent=s0; L1.textContent=s1; L2.textContent=s2; L3.textContent=s3;
+}
+
+// ---- interaction ----
+function cellOf(e){
+  const r=L3.getBoundingClientRect();
+  return { x:Math.max(0,Math.min(W-1,Math.floor((e.clientX-r.left)/(r.width /W)))),
+           y:Math.max(0,Math.min(H-1,Math.floor((e.clientY-r.top )/(r.height/H)))) };
+}
+stage.addEventListener('pointerdown', e=>{ const c=cellOf(e); dropFood(c.x,c.y); });
+
+document.getElementById('scatter').addEventListener('click', scatterFood);
+document.getElementById('reset').addEventListener('click', ()=>{ alloc(); setNest(); seedAnts(); delivered=0; scatterFood(); });
+const trailsBtn=document.getElementById('trails');
+trailsBtn.addEventListener('click', ()=>{ showTrails=!showTrails; trailsBtn.innerHTML='TRAILS &#9656; '+(showTrails?'ON':'OFF'); });
+const tickr=document.getElementById('tickr'), tickn=document.getElementById('tickn');
+tickr.addEventListener('input', ()=>{ tps=Math.max(0.1, parseFloat(tickr.value)||0.1); tickn.value=tps; });
+function applyNum(){ const v=parseFloat(tickn.value); if(!isNaN(v)&&v>0){ tps=Math.min(240,v); tickr.value=Math.max(0.5,Math.min(60,tps)); } }
+tickn.addEventListener('input', applyNum); tickn.addEventListener('change', applyNum);
+const antsSlider=document.getElementById('ants'), antVal=document.getElementById('antval');
+antsSlider.addEventListener('input', ()=>{ wantAnts=+antsSlider.value; antVal.textContent=antsSlider.value; seedAnts(); });
+
+// ---- theme switch ----
+const swap=document.getElementById('swap');
+swap.addEventListener('click', ()=>{
+  const green=document.body.classList.toggle('green');
+  document.body.classList.toggle('dark', !green);
+  swap.innerHTML = green ? 'SWITCH &#9656; TERMINAL' : 'SWITCH &#9656; VCN GREEN';
+  measureAndBuild();
+});
+
+// ---- main loop (time-accumulated so the tick rate can be any float) ----
+function updateHud(){
+  let carrying=0, remaining=0;
+  for(const a of ants) if(a.carry) carrying++;
+  for(let i=0;i<food.length;i++) remaining+=food[i];
+  hud.textContent = `ants ${ants.length}  ·  carrying ${carrying}  ·  delivered ${delivered}  ·  food left ${remaining}  ·  ${(+tps).toFixed(1)} ticks/s  ·  ${W}×${H}`;
+}
+let __paused=false;
+addEventListener('message',e=>{ if(e.data==='vcn:pause')__paused=true; else if(e.data==='vcn:run')__paused=false; });
+function frame(now){
+  if(__paused){ lastT=now; requestAnimationFrame(frame); return; }   // idle cheaply while scrolled away (reset clock so acc doesn't spike on resume)
+  if(!lastT) lastT=now;
+  acc += now-lastT; lastT=now;
+  const interval=1000/tps;
+  if(acc > interval*6) acc=interval;                 // clamp after tab-away / lag spikes
+  let stepped=false, guard=0;
+  while(acc>=interval && guard<12){ step(); acc-=interval; stepped=true; guard++; }
+  if(stepped){ render(); updateHud(); }
+  requestAnimationFrame(frame);
+}
+
+// ---- responsive layout ----
+function measureAndBuild(){
+  const green=document.body.classList.contains('green');
+  const fs = green
+    ? Math.max(15, Math.min(28, Math.floor(window.innerWidth/70)))
+    : Math.max(8,  Math.min(15, Math.floor(window.innerWidth/120)));
+  field.style.fontSize=fs+'px';
+  const probe=document.createElement('pre');
+  probe.style.cssText='position:absolute;visibility:hidden;margin:0;line-height:1.0;white-space:pre;font-weight:600;';
+  probe.style.font=getComputedStyle(L3).font;
+  probe.textContent=Array.from({length:10},()=>'M'.repeat(50)).join('\n');
+  document.body.appendChild(probe);
+  const r=probe.getBoundingClientRect();
+  CELL_W=r.width/50; CELL_H=r.height/10; probe.remove();
+  W=Math.max(24,Math.floor(window.innerWidth /CELL_W)-1);
+  H=Math.max(20,Math.floor(window.innerHeight/CELL_H)-1);
+  alloc(); setNest(); seedAnts(); scatterFood();
+}
+if(window.self!==window.top){ const u=document.getElementById('ui'); if(u) u.style.display='none'; }
+measureAndBuild();
+let rzTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(measureAndBuild,150); });
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

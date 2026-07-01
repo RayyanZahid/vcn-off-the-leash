@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en" style="--force-structure:.78;--force-density:.34;--force-warmth:.30;--force-stillness:.55;--force-volume:.46">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vibe Coding Nights, by builders, for builders</title>
+<meta name="description" content="The San Francisco builder community for people who code with AI agents. Bring a laptop, build something real, and leave with it working.">
+<link rel="canonical" href="https://vibecodingnights.com/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"Vibe Coding Nights","url":"https://vibecodingnights.com/","description":"San Francisco builder community for people who code with AI agents.","location":{"@type":"Place","name":"Frontier Tower","address":"995 Market St, San Francisco, CA"},"sameAs":["https://github.com/VibeCodingNights"]}
+</script>
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="Vibe Coding Nights, by builders, for builders">
+<meta property="og:description" content="We don't do spectating. Bring a laptop, build something real, leave with it working. An ongoing build-night series at Frontier Tower SF.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://vibecodingnights.com/">
+<meta property="og:image" content="/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vibe Coding Nights, by builders, for builders">
+<meta name="twitter:description" content="Bring a laptop, build something real, leave with it working. Frontier Tower SF.">
+<meta name="twitter:image" content="/og.jpg">
+<!-- cc-pro provenance -->
+<meta name="cc-pro:version" content="1">
+<meta name="cc-pro:persona" content="brody">
+<meta name="cc-pro:register" content="editorial">
+<meta name="cc-pro:microfeature" content="hero-ascii-decode">
+<meta name="cc-pro:discord" content="statement-inversion">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="alternate" type="application/json" title="VCN nights" href="/feed.json">
+<style>
+:root{
+  --bg:#000; --panel:#0a0a0c; --panel2:#101013; --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
+  --ink:#fff; --mut:rgba(255,255,255,.56); --faint:rgba(255,255,255,.34); --ghost:rgba(255,255,255,.045);
+  --mint:#7CF59C; --mint-deep:#00E6A6; --teal:#5FB6B6;            /* teal sampled from the ASCII hero — ambient only */
+  --sans:'Geist',system-ui,-apple-system,sans-serif;
+  --mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;letter-spacing:-.01em}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 22px}
+@media(min-width:760px){.wrap{padding:0 28px}}
+h1,h2,h3{font-family:var(--sans);font-weight:400;line-height:1.04;margin:0;letter-spacing:-.025em}
+.mono{font-family:var(--mono)}
+.mint{color:var(--mint)}
+.lab{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut)}
+.lab .n{color:var(--mint)}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(0,0,0,.55);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:500;font-size:15px;letter-spacing:-.02em}
+.navlinks{display:none;gap:24px;margin-left:auto;font-family:var(--mono);font-size:12.5px;color:var(--mut);letter-spacing:.02em}
+.navlinks a:hover{color:var(--ink)}
+@media(min-width:920px){.navlinks{display:flex}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);font-size:12.5px;font-weight:500;
+  min-height:44px;padding:11px 17px;border-radius:7px;border:1px solid var(--line2);transition:.18s;white-space:nowrap;color:var(--ink)}
+.btn:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.4)}
+.btn:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.btn.solid{background:var(--mint);color:#03150b;border-color:var(--mint);font-weight:600}
+.btn.solid:hover{background:#9bffb6;border-color:#9bffb6}
+.btn.lg{min-height:50px;padding:14px 22px;font-size:13.5px}
+.nav-cta{margin-left:auto}
+@media(min-width:920px){.nav-cta{margin-left:0}}
+
+/* HERO — full-bleed ASCII video (the new theme; kinetic chrome over calm body) */
+.hero{position:relative;min-height:100svh;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero__bg{position:absolute;inset:0;z-index:0}
+.hero__bg video,.hero__bg img{width:100%;height:100%;object-fit:cover;display:block}
+.hero__bg::after{content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(80% 60% at 60% 22%,rgba(95,182,182,.16),transparent 60%),
+    linear-gradient(180deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.12) 30%,rgba(0,0,0,.34) 58%,rgba(0,0,0,.96) 100%)}
+.hero .wrap{position:relative;z-index:1;width:100%;padding-top:64px;padding-bottom:46px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:24px}
+h1.big{font-size:clamp(40px,8.5vw,82px);font-weight:300;letter-spacing:-.035em;max-width:14ch}
+h1.big b{font-weight:500;color:var(--mint)}
+h1.big .word{display:inline-block}
+h1.big .char{display:inline-block;white-space:pre}
+.lede{font-size:clamp(16px,1.9vw,20px);color:rgba(255,255,255,.82);max-width:600px;margin:26px 0 0;line-height:1.55}
+.lede b{color:var(--ink);font-weight:500}
+.facts{display:flex;flex-wrap:wrap;gap:9px 22px;margin-top:26px;font-family:var(--mono);font-size:12.5px;color:rgba(255,255,255,.66)}
+.facts a:hover,.facts .live:hover{color:var(--mint)}
+.cta-row{display:flex;flex-wrap:wrap;gap:11px;margin-top:30px}
+.season-strip{display:flex;gap:9px;margin-top:40px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.season-strip img{height:74px;width:74px;object-fit:cover;border-radius:8px;border:1px solid var(--line2);
+  filter:grayscale(.45) brightness(.9);transition:.3s;flex:0 0 auto}
+.season-strip img:hover{filter:none}
+
+/* sections */
+section{padding:74px 0;border-bottom:1px solid var(--line)}
+@media(min-width:760px){section{padding:100px 0}}
+.sec-head{margin-bottom:36px}
+@media(min-width:760px){.sec-head{margin-bottom:44px}}
+.sec-head h2{font-size:clamp(28px,4.4vw,46px);font-weight:400;letter-spacing:-.03em}
+.sec-head h2 b{font-weight:500}
+.sec-head .sub{color:var(--mut);font-size:15.5px;margin-top:14px;max-width:660px;line-height:1.55}
+.sec-head .sub b{color:var(--ink);font-weight:500}
+
+/* numbered tenets */
+.tenets{display:grid;grid-template-columns:1fr;border-top:1px solid var(--line)}
+.tenet{padding:28px 22px 32px;border-bottom:1px solid var(--line)}
+.tenet .k{font-family:var(--mono);font-size:11.5px;color:var(--mint);letter-spacing:.12em}
+.tenet h3{font-size:20px;font-weight:500;margin:16px 0 11px;letter-spacing:-.02em}
+.tenet p{margin:0;font-size:14px;color:var(--mut);line-height:1.6}
+@media(min-width:560px){.tenets{grid-template-columns:repeat(2,1fr)}.tenet{border-right:1px solid var(--line)}.tenet:nth-child(2n){border-right:none}}
+@media(min-width:980px){.tenets{grid-template-columns:repeat(4,1fr)}.tenet{padding:34px 26px 38px}.tenet:nth-child(2n){border-right:1px solid var(--line)}.tenet:nth-child(4n){border-right:none}}
+
+/* STATEMENT — live navier-stokes field (black) with persistent white text over it */
+.statement{position:relative;overflow:hidden;background:#05070a;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.statement iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;z-index:0}
+.statement .wrap{position:relative;z-index:1;pointer-events:none;min-height:62vh;
+  display:flex;flex-direction:column;justify-content:center;padding-top:96px;padding-bottom:96px}
+.statement .lab{color:rgba(255,255,255,.62)}
+.statement p{font-family:var(--sans);font-size:clamp(30px,5.4vw,62px);font-weight:400;line-height:1.04;
+  letter-spacing:-.03em;margin:18px 0 0;max-width:20ch;color:#fff;text-shadow:0 2px 34px rgba(0,0,0,.7)}
+.statement p b{font-weight:600;color:var(--mint)}
+.statement .hint{margin-top:22px;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:rgba(255,255,255,.4)}
+
+/* nav + footer logo mark (locked brand pictorial: prompt caret + cursor) */
+.brand svg{width:22px;height:22px;color:var(--mint);flex:0 0 auto}
+
+/* SEASON as a clean line-by-line class list (no images) */
+.classlist{border-top:1px solid var(--line)}
+.clrow.clhidden{display:none}
+.seasonsub{margin:42px 0 6px}
+.showmore{display:inline-flex;align-items:center;gap:8px;margin-top:24px;font-family:var(--mono);font-size:12.5px;
+  color:var(--ink);background:transparent;border:1px solid var(--line2);border-radius:8px;padding:12px 18px;cursor:pointer;transition:.18s}
+.showmore:hover{border-color:var(--mint);color:var(--mint)}
+
+/* SEASONS accordion */
+.seasons{border-top:1px solid var(--line)}
+.szn{border-bottom:1px solid var(--line)}
+.szn-h{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;
+  background:transparent;border:0;color:var(--ink);font-family:var(--sans);text-align:left;padding:24px 4px;transition:.18s}
+.szn-h:hover{color:var(--mint)}
+.szn-t{font-size:19px;font-weight:500;letter-spacing:-.02em}
+.szn-t b{color:var(--mint);font-weight:600;margin-right:11px}
+.szn-meta{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:nowrap}
+.szn-badge{border:1px solid var(--line2);border-radius:999px;padding:3px 10px;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.szn-badge.cur{color:var(--mint);border-color:rgba(124,245,156,.5)}
+.szn-chev{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
+  border-top:6px solid currentColor;opacity:.55;transition:transform .2s}
+.szn.collapsed .szn-chev{transform:rotate(-90deg)}
+.szn.collapsed .szn-body{display:none}
+.szn-body .clrow:first-child{border-top:1px solid var(--line)}
+.szn-more{display:inline-flex;align-items:center;margin:18px 0 26px;font-family:var(--mono);font-size:12.5px;
+  color:var(--ink);background:transparent;border:1px solid var(--line2);border-radius:8px;padding:12px 18px;cursor:pointer;transition:.18s}
+.szn-more:hover{border-color:var(--mint);color:var(--mint)}
+.clrow{display:grid;grid-template-columns:78px 130px 1fr auto;gap:14px 22px;align-items:baseline;
+  padding:18px 4px;border-bottom:1px solid var(--line);transition:.18s}
+.clrow:hover{background:var(--panel2)}
+.clrow .date{font-family:var(--mono);font-size:12.5px;color:var(--mint);letter-spacing:.02em;white-space:nowrap}
+.clrow .date .dow{color:var(--faint);display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.clrow .main .nm{font-size:17px;font-weight:500;letter-spacing:-.02em}
+.clrow .main .nm .no{font-family:var(--mono);font-size:12px;color:var(--faint);margin-right:9px}
+.clrow .main .bl{font-size:13.5px;color:var(--mut);margin-top:4px;line-height:1.45}
+.clrow .rsvp{font-family:var(--mono);font-size:12px;color:var(--mut);white-space:nowrap;align-self:center;
+  border:1px solid var(--line2);border-radius:7px;padding:9px 14px;min-height:40px;display:inline-flex;align-items:center;transition:.18s}
+.clrow:hover .rsvp{border-color:var(--mint);color:var(--mint)}
+@media(max-width:620px){.clrow{grid-template-columns:78px 1fr auto}.clrow .date{grid-column:2/-1;display:flex;gap:8px;align-items:baseline}.clrow .date .dow{display:inline;margin:0}.clrow .gol{grid-row:span 2}}
+
+/* PAST EVENTS — dense, compact archive grid */
+.pastgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:680px){.pastgrid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1000px){.pastgrid{grid-template-columns:repeat(5,1fr)}}
+.pe{background:var(--bg);padding:13px 14px 15px;display:flex;flex-direction:column;gap:5px;transition:.18s}
+.pe:hover{background:var(--panel2)}
+.pe .pn{font-family:var(--mono);font-size:10.5px;color:var(--mint);letter-spacing:.06em}
+.pe .pt{font-size:13.5px;font-weight:500;letter-spacing:-.015em}
+.pe .pd{font-size:11px;color:var(--faint);line-height:1.35}
+
+/* PARTNERS — what every attendee gets (token + compute) */
+.perks{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:760px){.perks{grid-template-columns:repeat(2,1fr)}}
+.perk{background:var(--bg);padding:30px 26px 32px;display:flex;flex-direction:column;gap:14px}
+.perk .kind{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint)}
+.perk h3{font-size:22px;font-weight:500;letter-spacing:-.02em}
+.perk p{margin:0;font-size:14px;color:var(--mut);line-height:1.6}
+.perk .who{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:500}
+.perk .plogo{width:auto;flex:0 0 auto;display:block}
+.perk .plogo-zai{height:24px}
+.perk .plogo-neb{height:20px}
+.perk .amt{font-family:var(--mono);font-size:12px;color:var(--faint)}
+
+/* Build-with-us: live ASCII ant-colony foraging as the section background */
+#build{position:relative;overflow:hidden}
+#build .antbg{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:0;pointer-events:none;opacity:.5}
+#build::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(130% 100% at 50% 45%, rgba(0,0,0,.32), rgba(0,0,0,.86))}
+#build .wrap{position:relative;z-index:1}
+#build .invite{background:rgba(5,7,10,.28)}
+
+/* ship wall */
+.ships{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:560px){.ships{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:860px){.ships{grid-template-columns:repeat(3,1fr)}}
+.ship{background:var(--bg);padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px;transition:.2s;min-height:158px;
+  opacity:0;transform:translateY(12px)}
+.ship.in{opacity:1;transform:none}
+.ship:hover{background:var(--panel2)}
+.ship .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ship .repo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink);transition:.2s}
+.ship .repo .sl{color:var(--mint)}
+.ship:hover .repo{color:var(--mint)}
+.ship .stat{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap;letter-spacing:.02em}
+.ship .stat b{color:var(--mint);font-weight:500}
+.ship .d{font-size:13.5px;color:var(--mut);line-height:1.5;flex:1}
+.ship .when{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+.ships-foot{border:1px solid var(--line);border-top:none;padding:15px 20px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+.ships-foot a{color:var(--ink)} .ships-foot a:hover{color:var(--mint)}
+
+/* season grid */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(5,1fr)}}
+.card{background:var(--bg);display:flex;flex-direction:column;transition:.25s;opacity:0;transform:translateY(12px)}
+.card.in{opacity:1;transform:none}
+.card:hover{background:var(--panel2)}
+.card .pic{aspect-ratio:1;background:#050506;position:relative;overflow:hidden}
+.card .pic img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.35);transition:.35s}
+.card:hover .pic img{filter:none;transform:scale(1.03)}
+.card .tag{position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:11px;font-weight:500;
+  background:rgba(0,0,0,.7);color:var(--mint);padding:3px 8px;border-radius:5px;backdrop-filter:blur(6px)}
+.card .meta{padding:15px 15px 17px;display:flex;flex-direction:column;gap:7px;flex:1}
+.card .nm{font-weight:500;font-size:15.5px;letter-spacing:-.02em}
+.card .when{font-family:var(--mono);font-size:11.5px;color:var(--mut);letter-spacing:.02em}
+.card .blurb{font-size:12.5px;color:var(--faint);line-height:1.5;flex:1}
+.card .go{font-family:var(--mono);font-size:11.5px;color:var(--mut);border-top:1px solid var(--line);
+  padding:11px 15px;display:flex;justify-content:space-between;align-items:center;transition:.2s;min-height:44px}
+.card:hover .go{color:var(--mint)}
+
+/* split + duo */
+.split,.duo{display:grid;grid-template-columns:1fr;border-top:1px solid var(--line)}
+@media(min-width:820px){.split,.duo{grid-template-columns:1fr 1fr}}
+.block{padding:32px 24px;border-bottom:1px solid var(--line)}
+@media(min-width:820px){.block{padding:40px 36px;border-right:1px solid var(--line);border-bottom:none}.split .block:last-child{border-right:none}}
+.block h3{font-size:20px;font-weight:500;margin-bottom:20px;letter-spacing:-.02em}
+.row{display:flex;gap:14px;padding:13px 0;border-top:1px solid var(--line);font-size:14px;align-items:baseline}
+.row:first-of-type{border-top:none}
+.row b{font-family:var(--mono);color:var(--mint);font-size:11.5px;letter-spacing:.08em;min-width:112px;font-weight:500}
+.row span{color:var(--mut)}
+.tags{margin-top:20px}
+.tags i{display:inline-block;font-family:var(--mono);font-size:11.5px;font-style:normal;color:var(--mut);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:4px 6px 0 0}
+.invite{padding:36px 24px;border-bottom:1px solid var(--line)}
+@media(min-width:820px){.invite{padding:48px 40px;border-right:1px solid var(--line);border-bottom:none}.duo .invite:last-child{border-right:none}}
+.invite h3{font-size:24px;font-weight:500;margin-bottom:14px;letter-spacing:-.025em}
+.invite p{color:var(--mut);font-size:14.5px;margin:0 0 24px;line-height:1.6;max-width:42ch}
+
+/* join + ghost */
+.join{text-align:center;padding:92px 0 36px}
+.join h2{font-size:clamp(30px,5.5vw,60px);font-weight:300;letter-spacing:-.035em;margin-bottom:16px}
+.join h2 b{font-weight:500}
+.join p{color:var(--mut);max-width:540px;margin:0 auto 26px;font-size:15.5px}
+.ghost{font-size:clamp(28px,11vw,118px);font-weight:600;letter-spacing:-.04em;line-height:.9;
+  color:var(--ghost);text-align:center;padding:30px 0 0;user-select:none;white-space:nowrap;overflow:hidden}
+
+footer{padding:48px 0;color:var(--faint);font-size:13px}
+.hosts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:18px 0 24px;font-family:var(--mono);font-size:12px}
+.hosts span{color:var(--mut)} .hosts b{color:var(--ink);font-weight:500}
+.fnav{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--mut)}
+.fnav a:hover{color:var(--mint)}
+
+/* ASCII LAB — live experiments embedded in prime-intellect terminal chrome */
+.band{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:#040506;
+  mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.band pre{margin:0;padding:14px 0;font-family:var(--mono);font-size:12px;line-height:1.05;
+  white-space:pre;color:var(--mint);opacity:.34;user-select:none;letter-spacing:0;
+  text-shadow:0 0 6px rgba(124,245,156,.35)}
+
+.lab-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.lab-head .sub{max-width:560px}
+
+/* terminal window frame */
+/* full-bleed: break out of the centered column to the full viewport width */
+.term-win{margin-top:38px;margin-left:calc(50% - 50vw);width:100vw;overflow:hidden;background:#04120a;
+  border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.term-bar{display:flex;align-items:center;gap:10px;padding:12px max(20px,calc(50vw - 600px));border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0d0e10,#070709);font-family:var(--mono);font-size:12px;color:var(--mut)}
+.term-bar .dots{display:flex;gap:7px}
+.term-bar .dots i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.16)}
+.term-bar .dots i:first-child{background:#ff5f57}.term-bar .dots i:nth-child(2){background:#febc2e}.term-bar .dots i:nth-child(3){background:var(--mint)}
+.term-bar .path{letter-spacing:.02em}.term-bar .path b{color:var(--mint);font-weight:500}
+.term-bar .open{margin-left:auto;color:var(--mut);transition:.18s}.term-bar .open:hover{color:var(--mint)}
+.term-stage{position:relative;height:clamp(440px,72vh,880px);background:#04120a}
+.term-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.term-stage .veil{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;text-align:center;padding:24px;background:radial-gradient(60% 60% at 50% 45%,#06241a,#04120a);cursor:pointer;transition:.3s}
+.term-stage .veil.gone{opacity:0;pointer-events:none}
+.term-stage .veil .pulse{font-family:var(--mono);font-size:13px;color:var(--mint);letter-spacing:.16em}
+.term-stage .veil .pulse .b{display:inline-block;width:9px;height:14px;background:var(--mint);margin-left:3px;vertical-align:-2px;
+  animation:blink 1.1s steps(1) infinite;box-shadow:0 0 10px var(--mint)}
+@keyframes blink{50%{opacity:0}}
+.term-stage .veil small{font-family:var(--mono);font-size:11.5px;color:var(--mut);letter-spacing:.04em}
+.term-cap{font-family:var(--mono);font-size:11.5px;color:var(--faint);padding:12px max(20px,calc(50vw - 600px));border-top:1px solid var(--line);
+  display:flex;gap:8px 18px;flex-wrap:wrap}
+.term-cap b{color:var(--mint);font-weight:500}
+
+/* experiment launch cards */
+.exps{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:30px}
+@media(min-width:560px){.exps{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:980px){.exps{grid-template-columns:repeat(4,1fr)}}
+.exp{background:var(--bg);padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px;transition:.2s}
+.exp:hover{background:var(--panel2)}
+.exp pre{margin:0;font-family:var(--mono);font-size:12px;line-height:1.15;color:var(--mint);opacity:.62;
+  white-space:pre;min-height:74px;transition:.2s;text-shadow:0 0 5px rgba(124,245,156,.3)}
+.exp:hover pre{opacity:1}
+.exp .nm{font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--ink)}
+.exp:hover .nm{color:var(--mint)}
+.exp .d{font-size:12.5px;color:var(--mut);line-height:1.5;flex:1}
+.exp .go{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em;display:flex;justify-content:space-between}
+.exp:hover .go{color:var(--mint)}
+
+/* full-bleed wind-tunnel band — VIBE CODING NIGHTS on one line is the obstacle */
+.windband{position:relative;width:100vw;margin-left:calc(50% - 50vw);overflow:hidden;background:#04120a;
+  height:clamp(340px,52vh,620px);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.windband iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+
+/* per-event Game of Life glyph — sits still, cycles states */
+.clrow .gol{margin:0;font-family:var(--mono);font-size:8px;line-height:1.0;white-space:pre;color:var(--mint);
+  opacity:.6;align-self:center;justify-self:center;text-align:center;text-shadow:0 0 5px rgba(124,245,156,.4);transition:.18s;letter-spacing:0}
+.clrow:hover .gol{opacity:1}
+.clrow .main .venue{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.02em;margin-top:6px}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .hero__bg video{display:none}
+  .ship,.card{opacity:1!important;transform:none!important}
+  .band pre{animation:none}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top">
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 10 L10 16 L4 22" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/><rect x="18" y="8" width="4" height="16" fill="currentColor"/></svg>
+    Vibe Coding Nights
+  </a>
+  <div class="navlinks">
+    <a href="#seasons">Seasons</a><a href="#how">Ethos</a><a href="#partners">Partners</a>
+    <a href="#speak">Speak</a><a href="#sponsor">Sponsor</a><a href="#join">Join</a>
+  </div>
+  <a class="btn solid nav-cta" href="#seasons">Upcoming Events</a>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="hero__bg">
+    <video autoplay loop muted playsinline poster="/poster.jpg" aria-hidden="true">
+      <source src="/hero.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="wrap">
+    <div class="eyebrow">San Francisco / Frontier Tower</div>
+    <h1 class="big" id="h1" data-text="Vibe Coding Nights By Builders, For Builders">Vibe Coding Nights <b>By Builders, For Builders</b></h1>
+    <p class="lede">A San Francisco community for people who build with AI. Bring a laptop, build something real, and leave with it working. Not a classroom. Not a talk series.</p>
+    <div class="facts">
+      <a href="https://luma.com/vcn-39-browser-tax-instrument-your-site-" target="_blank" rel="noopener">Upcoming Event: #39 Browser Tax, Wed Jul 1</a>
+    </div>
+    <div class="cta-row">
+      <a class="btn solid lg" href="#seasons">Upcoming Events</a>
+      <a class="btn lg" href="https://t.me/+EBFzKXmJAVk5ZGU0" target="_blank" rel="noopener">Join Community</a>
+    </div>
+    <div class="season-strip" id="strip"></div>
+  </div>
+</header>
+
+<main>
+<!-- ETHOS -->
+<section id="how"><div class="wrap">
+  <div class="sec-head">
+    <div class="lab"><span class="n">01</span> &nbsp;Ethos</div>
+    <h2 style="margin-top:16px">What this <b>actually is</b></h2>
+  </div>
+  <div class="tenets">
+    <div class="tenet"><div class="k">01 / DO THE WORK</div><h3>Laptops mandatory</h3><p>This is a build night, not a lecture. Everyone opens a laptop and builds. If you did not bring one, you are in the wrong room.</p></div>
+    <div class="tenet"><div class="k">02 / SIGNAL</div><h3>Only what matters</h3><p>We pick the few things actually worth knowing each season and go deep on them. Less hype, more signal.</p></div>
+    <div class="tenet"><div class="k">03 / FUNDAMENTALS</div><h3>How it works</h3><p>We teach how things work, not which product to buy. You leave understanding the fundamentals, not a sales pitch.</p></div>
+    <div class="tenet"><div class="k">04 / COMMUNITY</div><h3>Builders together</h3><p>A room of people who build, learn from each other, and push each other. The kind of room serious builders and partners want to be in.</p></div>
+  </div>
+</div></section>
+
+<!-- STATEMENT — live navier-stokes field (black), persistent text over it; mouse paints green -->
+<div class="statement">
+  <iframe data-embed="/lab/navier-stokes.html" title="Interactive navier-stokes fluid field" loading="lazy" aria-hidden="true"></iframe>
+  <div class="wrap">
+    <div class="lab">The whole idea</div>
+    <p>We learn by <b>actually doing the work.</b></p>
+    <div class="hint">move your cursor through the field</div>
+  </div>
+</div>
+
+<!-- SEASONS — one accordion list grouped by season -->
+<section id="seasons"><div class="wrap">
+  <div class="sec-head">
+    <div class="lab"><span class="n">02</span> &nbsp;Seasons</div>
+    <h2 style="margin-top:16px">Upcoming Events</h2>
+    <p class="sub">Each night is one hands-on build: a short talk on something frontier, then you open your laptop and ship it yourself with AI agents, and leave with it working. Two nights a week at Frontier Tower SF, grouped by season. Pick one below and <b>RSVP on Luma</b>.</p>
+  </div>
+  <div class="seasons" id="seasons-list"></div>
+</div></section>
+
+<!-- PARTNERS -->
+<section id="partners"><div class="wrap">
+  <div class="sec-head">
+    <div class="lab"><span class="n">03</span> &nbsp;Partners</div>
+    <h2 style="margin-top:16px">Every attendee gets <b>tokens and compute.</b></h2>
+    <p class="sub">Our partners put real resources in builders' hands for the night. Show up, claim your credits, and build with them. Frontier Tower, 995 Market St, San Francisco.</p>
+  </div>
+  <div class="perks">
+    <div class="perk">
+      <div class="kind">Token providers</div>
+      <h3>API tokens for the session</h3>
+      <p>Frontier model access so you can build all night without watching a meter. Granted to every attendee.</p>
+      <div class="who"><svg class="plogo plogo-zai" viewBox="0 0 30 30" role="img" aria-label="z.ai"><path fill="#2D2D2D" stroke="#FFFFFF" stroke-width="0.6317" stroke-miterlimit="10" d="M24.51,28.51H5.49c-2.21,0-4-1.79-4-4V5.49c0-2.21,1.79-4,4-4h19.03c2.21,0,4,1.79,4,4v19.03C28.51,26.72,26.72,28.51,24.51,28.51z"/><g fill="#FFFFFF"><path d="M15.47,7.1l-1.3,1.85c-0.2,0.29-0.54,0.47-0.9,0.47h-7.1V7.09C6.16,7.1,15.47,7.1,15.47,7.1z"/><polygon points="24.3,7.1 13.14,22.91 5.7,22.91 16.86,7.1"/><path d="M14.53,22.91l1.31-1.86c0.2-0.29,0.54-0.47,0.9-0.47h7.09v2.33H14.53z"/></g></svg>z.ai + Claude Code</div>
+      <div class="amt">Session credits, per attendee</div>
+    </div>
+    <div class="perk">
+      <div class="kind">Compute providers</div>
+      <h3>GPU compute for the labs</h3>
+      <p>Token-factory and GPU credits for the hands-on labs, so local models and fine-tunes actually run in the room.</p>
+      <div class="who"><svg class="plogo plogo-neb" viewBox="0 0 131 36" fill="none" role="img" aria-label="Nebius"><path d="M121.519 0H8.98085C4.02167 0 0 4.06364 0 9.07661V26.9234C0 31.9364 4.02167 36 8.98085 36H121.519C126.48 36 130.5 31.9364 130.5 26.9234V9.07661C130.5 4.06364 126.478 0 121.519 0Z" fill="#E0FF4F"/><path d="M16.1411 9.55438C17.7334 9.55438 18.8563 10.4347 19.5442 12.0049L23.7455 21.7049C24.8103 24.1575 26.8178 23.8787 26.8178 23.8787C26.8178 25.2604 25.7328 26.5519 24.1385 26.5519C22.5443 26.5519 21.4233 25.6696 20.7355 24.0994L16.5322 14.4014C15.4714 11.9508 13.4619 12.2276 13.4619 12.2276V26.3073H10.125V16.2644C10.125 12.4403 13.4436 12.2284 13.4619 12.2276C13.4619 10.8459 14.5489 9.55438 16.1411 9.55438ZM84.6687 18.5786C84.6687 21.6448 86.5899 23.4596 89.8968 23.4596C93.2036 23.4596 95.1507 21.6468 95.1507 18.5786V9.78899H98.4837V18.5245C98.4836 23.3774 95.0706 26.5518 89.8968 26.5519C84.7229 26.5519 81.3358 23.3514 81.3358 18.5245V9.78899H84.6687V18.5786ZM110.53 9.54224C114.204 9.58635 119.931 10.2522 120.264 14.8786H116.588C116.263 12.5364 111.071 12.4581 108.418 12.7248C108.4 12.7255 105.22 12.8559 105.22 14.4395C105.218 14.4509 105.004 15.8764 108.157 16.168C108.506 16.2021 113.134 16.5872 113.464 16.6133L113.708 16.6374C116.396 16.9142 117.803 17.0585 119.444 18.378H119.44L119.432 18.3819C121.122 19.8499 121.393 23.1207 118.822 24.8052C116.492 26.2992 113.574 26.4857 110.883 26.5519C106.932 26.5519 101.273 25.7798 101.279 20.8025H104.913C105.029 21.9716 105.715 22.6735 106.912 23.0164C108.328 23.4115 109.698 23.4617 111.041 23.4718C114.109 23.4718 117.097 22.9703 116.905 21.2337C116.728 19.6595 114.635 19.499 113.644 19.4228C113.614 19.4208 113.584 19.4188 113.554 19.4167C112.92 19.3667 109.973 19.1871 109.958 19.1862C108.103 19.0539 106.754 18.8514 105.927 18.701C104.135 18.3661 103.258 17.6781 102.683 17.1748C101.203 15.7831 100.972 12.6787 103.333 11.1205C105.44 9.74885 108.095 9.6024 110.53 9.54224ZM63.9131 9.78899C66.7828 9.80704 70.4648 10.4568 70.4648 14.295C70.4648 15.9795 69.7186 17.1186 68.8182 17.7122L68.8163 17.7143C69.7127 17.9831 71.4955 19.2484 71.4955 21.6348C71.4955 24.4162 69.8791 26.3134 64.9218 26.3134V26.3073H54.1751V9.78899H63.9131ZM50.7399 12.9134H36.9488V16.4729H49.2459V19.5973H36.9488V23.1829H50.7399V26.3073H33.5879V9.78899H50.7399V12.9134ZM77.8984 26.3073H74.5375V9.78899H77.8984V26.3073ZM30.1568 19.8419C30.1568 23.676 26.8217 23.8785 26.8178 23.8787V9.79898H30.1568V19.8419ZM57.5401 23.1829H64.97V23.1809C66.5262 23.1789 68.0241 22.9302 68.0241 21.354C68.0241 19.7778 66.3717 19.479 64.9238 19.479V19.471H57.5401V23.1829ZM57.538 16.543H64.9681C65.8785 16.535 67.2361 16.2422 67.2361 14.8465C67.236 13.4508 66.0529 12.9095 64.5088 12.9095H57.538V16.543Z" fill="#052B42"/></svg>Nebius Token Factory</div>
+      <div class="amt">Lab credits, per attendee</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- PARTNER — ASCII ant-colony foraging runs behind this section -->
+<section id="build">
+  <iframe class="antbg" data-embed="/lab/ant-colony.html" title="ASCII ant colony optimization" loading="lazy" aria-hidden="true"></iframe>
+  <div class="wrap">
+  <div class="sec-head">
+    <div class="lab"><span class="n">04</span> &nbsp;Build with us</div>
+    <h2 style="margin-top:16px">Speak. <b>Partner.</b></h2>
+  </div>
+  <div class="duo">
+    <div class="invite" id="speak">
+      <h3>Teach a night</h3>
+      <p>We take builder led talks and live demos from people who shipped something real. Bring a pattern you built, not a product walkthrough. If it is frontier and it works, the room wants to see it.</p>
+      <a class="btn lg" href="mailto:rayyanzahidpk@gmail.com?subject=VCN%20talk%20pitch">Pitch a talk</a>
+    </div>
+    <div class="invite" id="sponsor">
+      <h3>Sponsor a partnered event</h3>
+      <p>Have a core product builders should know? We won't sell a logo on a slide. We put your tool in real builders' hands for a night and show what they ship. That is worth more. Title and per night partnerships open across the season.</p>
+      <a class="btn lg" href="mailto:rayyanzahidpk@gmail.com?subject=VCN%20sponsorship">Talk sponsorship</a>
+    </div>
+  </div>
+</div></section>
+</main>
+
+<!-- JOIN -->
+<section id="join" style="border-bottom:none"><div class="wrap">
+  <div class="join">
+    <div class="lab" style="text-align:center">Every Wednesday night, every Saturday morning</div>
+    <h2 style="margin-top:18px">Come <b>build</b> with us.</h2>
+    <div class="cta-row" style="justify-content:center;margin-top:26px">
+      <a class="btn solid lg" href="https://t.me/+EBFzKXmJAVk5ZGU0" target="_blank" rel="noopener">Join the Telegram</a>
+      <a class="btn lg" href="#seasons">RSVP a night</a>
+    </div>
+  </div>
+</div></section>
+
+<!-- WIND TUNNEL BAND — full-bleed, VIBE CODING NIGHTS on one line is the obstacle -->
+<div class="windband">
+  <iframe src="/lab/wind-tunnel.html" title="ASCII wind tunnel, VIBE CODING NIGHTS spelled in the obstacle" aria-hidden="true"></iframe>
+</div>
+
+<footer><div class="wrap">
+  <div class="brand" style="font-size:16px">
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 10 L10 16 L4 22" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/><rect x="18" y="8" width="4" height="16" fill="currentColor"/></svg>
+    Vibe Coding Nights
+  </div>
+  <div class="hosts">
+    <span>Facilitated by <b>Rayyan Zahid</b>, Immersive Commons</span>
+    <span><b>Michalis Vasileiadis</b>, Hacker Bob</span>
+    <span><b>Eric Mockler</b>, AI Geneticist</span>
+  </div>
+  <div class="fnav">
+    <a href="#seasons">Seasons</a><a href="#how">Ethos</a><a href="#partners">Partners</a>
+    <a href="#speak">Speak</a><a href="#sponsor">Sponsor</a>
+    <a href="https://github.com/VibeCodingNights" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://t.me/+EBFzKXmJAVk5ZGU0" target="_blank" rel="noopener">Telegram</a>
+  </div>
+</div></footer>
+
+<script id="evdata" type="application/json">
+[
+ {"n":41,"nm":"Bare Metal","d":"Wed Jul 15","f":"Night, F10","u":"https://luma.com/vcn-41-bare-metal","b":"Run a coding agent against a local open-weights model. No API bill."},
+ {"n":42,"nm":"The Sandbox","d":"Sat Jul 18","f":"Morning, F9","u":"https://luma.com/vcn-42-the-sandbox","b":"Give your agent a disposable code exec sandbox."},
+ {"n":43,"nm":"Cattle, Not Pets","d":"Wed Jul 22","f":"Night, F10","u":"https://luma.com/vcn-43-cattle-not-pets","b":"Spin your agent a throwaway micro VM."},
+ {"n":44,"nm":"The Loop","d":"Sat Jul 25","f":"Morning, F9","u":"https://luma.com/vcn-44-the-loop","b":"Build the agent loop from scratch: plan, act, observe."},
+ {"n":45,"nm":"Bench","d":"Wed Jul 29","f":"Night, F10","u":"https://luma.com/vcn-45-bench","b":"Write an eval for your coding agent. Your tasks, pass^k."},
+ {"n":46,"nm":"Bake-Off","d":"Sat Aug 1","f":"Morning, F9","u":"https://luma.com/vcn-46-bake-off","b":"Coding agents head to head on your bench."},
+ {"n":47,"nm":"Fast Local","d":"Wed Aug 5","f":"Night, F10","u":"https://luma.com/vcn-47-fast-local","b":"Quantize and serve local models fast."},
+ {"n":48,"nm":"Total Recall","d":"Sat Aug 8","f":"Morning, F9","u":"https://luma.com/vcn-48-total-recall","b":"Repo memory and retrieval for the agent."},
+ {"n":49,"nm":"The Swarm","d":"Wed Aug 12","f":"Night, F10","u":"https://luma.com/vcn-49-the-swarm","b":"Parallel agents fanned out in git worktrees."},
+ {"n":50,"nm":"Own the Stack","d":"Sat Aug 15","f":"Morning, F9","u":"https://luma.com/vcn-50-own-the-stack","b":"Capstone: self host the full local rig, zero API bill."}
+]
+</script>
+<script id="s3data" type="application/json">
+[
+ {"n":39,"nm":"Browser Tax","d":"Wed Jul 1","f":"Night, F9","u":"https://luma.com/vcn-39-browser-tax-instrument-your-site-","b":"Instrument your own site with WebMCP. No agent SDK, just navigator.modelContext."},
+ {"n":40,"nm":"Hardpoint","d":"Wed Jul 8","f":"Night, F9 Annex","u":"https://luma.com/vcn-40-hardpoint-build-an-agent-that-wit","b":"Build an agent that withstands red-teaming. Allowlist by design."},
+ {"n":38,"nm":"Glass Box","d":"Wed Jun 24","f":"Night, F9","u":"https://luma.com/vcn-38-glass-box-trace-agents-with-opent","b":"Trace agents with OpenTelemetry."},
+ {"n":37,"nm":"Settlement","d":"Wed Jun 17","f":"Night, F9","u":"https://luma.com/vcn-37-settlement-build-an-x402-paywall","b":"Build an x402 paywall."},
+ {"n":36,"nm":"Crosstalk","d":"Wed Jun 10","f":"Night, F10 Annex","u":"https://luma.com/vcn-36-crosstalk-build-your-own-a2a-endp","b":"Build your own A2A endpoint."},
+ {"n":35,"nm":"Well-Known","d":"Wed Jun 3","f":"Night, F9","u":"https://luma.com/vcn-35-well-known-make-your-site-discove","b":"Make your site discoverable by agents."},
+ {"n":34,"nm":"Toolsmith","d":"Wed May 27","f":"Night, F9","u":"https://luma.com/vcn-34-toolsmith-build-your-own-mcp-serv","b":"Build your own MCP server."},
+ {"n":33,"nm":"Total Recall","d":"Mon May 11","f":"Night, F10 Annex","u":"https://luma.com/vcn-33-total-recall","b":"Agent memory and retrieval."},
+ {"n":32,"nm":"Ethical Hacking","d":"Wed Apr 29","f":"Night","u":"https://luma.com/vibe-coding-night-32-vibe-hacking","b":"Offensive security for agents."}
+]
+</script>
+<script>
+const ev=JSON.parse(document.getElementById('evdata').textContent);          // Season 4 (#41-50)
+const s3=JSON.parse(document.getElementById('s3data').textContent);          // Season 3 (#39,40 upcoming, then past)
+const dow=e=>e.d.split(' ')[0], when=e=>e.d.split(' ').slice(1).join(' '), tod=e=>e.f.split(',')[0].trim();
+const venue=e=>{const fl=/F10 Annex/.test(e.f)?'Floor 10 Annex':/F9 Annex/.test(e.f)?'Floor 9 Annex':/F10/.test(e.f)?'Floor 10':/F9/.test(e.f)?'Floor 9':'';return `Frontier Tower${fl?', '+fl:''}, 995 Market St`;};
+
+// hero poster strip (teaser motion)
+document.getElementById('strip').innerHTML=ev.map(e=>`<a href="#seasons" aria-label="VCN #${e.n} ${e.nm}"><img loading="lazy" src="/posters/vcn-${e.n}.gif" alt="VCN #${e.n} ${e.nm} poster"></a>`).join('');
+
+// ONE accordion list grouped by season — current open, upcoming open (first 5), old seasons collapsed
+function rowHTML(e){return `
+ <a class="clrow" href="${e.u}" target="_blank" rel="noopener">
+   <pre class="gol" data-gol="${e.n}"></pre>
+   <div class="date">${when(e)}<span class="dow">${dow(e)} / ${tod(e)}</span></div>
+   <div class="main"><div class="nm"><span class="no">#${e.n}</span>${e.nm}</div><div class="bl">${e.b}</div><div class="venue">${venue(e)}</div></div>
+   <span class="rsvp">RSVP on Luma</span>
+ </a>`;}
+const SEASONS=[
+  {n:3,name:"Agent Native",badge:"Current",cur:true, open:true, cap:2, rows:s3},   // current — shows the live nights, rest behind show-more
+  {n:4,name:"Off the Leash",badge:"Upcoming",cur:false,open:true, cap:5, rows:ev}, // upcoming — first 5, rest behind show-more
+];
+document.getElementById('seasons-list').innerHTML=SEASONS.map(s=>{
+  const rows=s.rows.map((e,i)=>rowHTML(e).replace('class="clrow"', i>=s.cap?'class="clrow clhidden"':'class="clrow"')).join('');
+  const more=s.rows.length>s.cap?`<button class="szn-more" type="button">Show ${s.rows.length-s.cap} more nights</button>`:'';
+  return `<div class="szn${s.open?'':' collapsed'}">
+    <button class="szn-h" type="button" aria-expanded="${s.open}">
+      <span class="szn-t"><b>Season ${s.n}</b>${s.name}</span>
+      <span class="szn-meta"><span class="szn-badge${s.cur?' cur':''}">${s.badge}</span><span>${s.rows.length} nights</span><span class="szn-chev"></span></span>
+    </button>
+    <div class="szn-body">${rows}${more}</div>
+  </div>`;
+}).join('');
+// accordion toggle
+document.querySelectorAll('#seasons-list .szn-h').forEach(h=>h.addEventListener('click',()=>{
+  const szn=h.closest('.szn'), collapsed=szn.classList.toggle('collapsed'); h.setAttribute('aria-expanded',String(!collapsed));
+}));
+// per-season show-more
+document.querySelectorAll('#seasons-list .szn-more').forEach(btn=>btn.addEventListener('click',()=>{
+  btn.closest('.szn-body').querySelectorAll('.clrow.clhidden').forEach(r=>r.classList.remove('clhidden')); btn.remove();
+}));
+
+// MICROFEATURE — hero headline decodes from ASCII glyphs to text on load (samples the theme)
+(function(){
+  const el=document.getElementById('h1');
+  if(!el||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const glyphs="01@$#{}:;/\\<>=+*".split("");
+  const full=el.getAttribute('data-text');
+  // keep the bold split: rebuild innerHTML with a span per char, second sentence stays mint via <b>
+  const plain="Vibe Coding Nights", bold="By Builders, For Builders";
+  function wrap(str){return str.split(" ").map(word=>`<span class="word">`+word.split("").map(c=>`<span class="char" data-c="${c}">${c}</span>`).join("")+`</span>`).join(" ");}
+  el.innerHTML=wrap(plain)+" <b>"+wrap(bold)+"</b>";
+  const spans=[...el.querySelectorAll('.char')];
+  const start=performance.now(), DUR=720, STAGGER=14;
+  function frame(t){
+    let done=true;
+    spans.forEach((s,i)=>{
+      const local=(t-start)-i*STAGGER;
+      const real=s.getAttribute('data-c');
+      if(real===' '){s.textContent=' ';return;}
+      if(local<0){s.textContent=glyphs[(i*7)%glyphs.length];done=false;}
+      else if(local<260){s.textContent=glyphs[Math.floor(Math.random()*glyphs.length)];done=false;}
+      else{s.textContent=real;}
+    });
+    if(!done) requestAnimationFrame(frame);
+    else spans.forEach(s=>s.textContent=s.getAttribute('data-c'));
+  }
+  requestAnimationFrame(frame);
+})();
+
+// LAZY EMBEDS — load any iframe[data-embed] (e.g. the statement navier-stokes field) when it scrolls into view
+(function(){
+  const ifr=[...document.querySelectorAll('iframe[data-embed]')];
+  if(!ifr.length) return;
+  const load=f=>{ if(!f.src) f.src=f.dataset.embed; };
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){load(x.target);io.unobserve(x.target);}}),{rootMargin:'200px 0px',threshold:.01});
+    ifr.forEach(f=>io.observe(f));
+  }else{ ifr.forEach(load); }
+})();
+
+// SIM POWER — only the on-screen ASCII sim animates; the others idle their rAF loop (each sim honors vcn:pause / vcn:run).
+// Kills the case where the eager footer wind-tunnel + ant-colony + statement fluid all burn CPU at once.
+(function(){
+  const sims=[...document.querySelectorAll('.statement iframe,#build .antbg,.windband iframe')];
+  if(!sims.length || !('IntersectionObserver' in window)) return;
+  const state=new WeakMap();
+  const send=(f,on)=>{ try{ f.contentWindow && f.contentWindow.postMessage(on?'vcn:run':'vcn:pause','*'); }catch(e){} };
+  const io=new IntersectionObserver(es=>es.forEach(x=>{
+    const on=x.isIntersecting;
+    if(state.get(x.target)===on) return;
+    state.set(x.target,on); send(x.target,on);
+  }),{rootMargin:'150px 0px',threshold:.01});                       // wake ~150px before it enters, so no cold frame
+  sims.forEach(f=>{ io.observe(f); f.addEventListener('load',()=>{ const on=state.get(f); if(on!==undefined) send(f,on); }); });  // re-assert after (lazy/eager) load
+})();
+
+// PER-EVENT GAME OF LIFE — real lifeforms: floaters (glider, LWSS) drift + wrap; artifacts (oscillators, still lifes) sit
+(function(){
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const els=[...document.querySelectorAll('[data-gol]')];
+  if(!els.length) return;
+  const GW=12, GH=7, A='#', D=' ';
+  const P={
+    glider:[[1,0],[2,1],[0,2],[1,2],[2,2]],                                    // floater (diagonal spaceship)
+    lwss:[[1,0],[4,0],[0,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3]],              // floater (lightweight spaceship)
+    blinker:[[0,1],[1,1],[2,1]],                                               // oscillator
+    toad:[[1,1],[2,1],[3,1],[0,2],[1,2],[2,2]],                                // oscillator
+    beacon:[[0,0],[1,0],[0,1],[1,1],[2,2],[3,2],[2,3],[3,3]],                  // oscillator
+    block:[[0,0],[1,0],[0,1],[1,1]],                                           // still life (artifact)
+    beehive:[[1,0],[2,0],[0,1],[3,1],[1,2],[2,2]],                             // still life (artifact)
+  };
+  const ROT=['glider','blinker','toad','lwss','beacon','beehive','glider','toad','blinker','block'];
+  const FLOAT={glider:1,lwss:1};
+  function make(el,idx){
+    const name=ROT[idx%ROT.length], pat=P[name], isFloat=FLOAT[name];
+    let g=new Uint8Array(GW*GH);
+    const ix=(x,y)=>(((x%GW)+GW)%GW)+(((y%GH)+GH)%GH)*GW;
+    function seed(){ g.fill(0);
+      let mx=0,my=0; pat.forEach(([x,y])=>{if(x>mx)mx=x;if(y>my)my=y;});
+      const ox=Math.floor((GW-1-mx)/2), oy=Math.floor((GH-1-my)/2);   // center every pattern by its bounding box
+      pat.forEach(([x,y])=>{g[ix(x+ox,y+oy)]=1;});
+    }
+    function step(){ const n=new Uint8Array(GW*GH); let live=0;
+      for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){let c=0;
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(dx||dy)c+=g[ix(x+dx,y+dy)];}
+        const a=g[ix(x,y)]?(c===2||c===3?1:0):(c===3?1:0); n[ix(x,y)]=a; live+=a;}
+      g=n; return live;
+    }
+    function draw(){let o='';for(let y=0;y<GH;y++){for(let x=0;x<GW;x++)o+=g[ix(x,y)]?A:D;o+=(y<GH-1?'\n':'');}el.textContent=o;}
+    seed(); draw();
+    return ()=>{ if(step()===0) seed(); draw(); };   // toroidal: floaters loop forever, oscillators/still-lifes persist
+  }
+  const ticks=els.map((el,i)=>make(el,i));
+  if(reduce){return;}
+  let last=0;
+  (function loop(now){ if(now-last>200){last=now; ticks.forEach(t=>t());} requestAnimationFrame(loop); })(0);
+})();
+
+// JSON-LD events
+const ld=[...ev,...s3].map(e=>({"@context":"https://schema.org","@type":"Event","name":`VCN #${e.n}: ${e.nm}`,"eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","location":{"@type":"Place","name":"Frontier Tower","address":"995 Market St, San Francisco, CA"},"organizer":{"@type":"Organization","name":"Vibe Coding Nights"},"url":e.u,"offers":{"@type":"Offer","price":"10","priceCurrency":"USD","url":e.u}}));
+const s=document.createElement('script');s.type='application/ld+json';s.textContent=JSON.stringify(ld);document.head.appendChild(s);
+</script>
+</body>
+</html>
