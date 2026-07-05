@@ -190,7 +190,8 @@ section{padding:74px 0;border-bottom:1px solid var(--line)}
 
 /* Build-with-us: ShaderGradient sphere (green on black) as the section background */
 #build{position:relative;overflow:hidden}
-#build .antbg{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:0;pointer-events:none;opacity:.5}
+#build .antbg{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease}
+#build .antbg.on{opacity:.5}
 #build::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(130% 100% at 50% 45%, rgba(0,0,0,.32), rgba(0,0,0,.86))}
 #build .wrap{position:relative;z-index:1}
@@ -580,7 +581,15 @@ document.querySelectorAll('#seasons-list .szn-more').forEach(btn=>btn.addEventLi
     const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){load(x.target);io.unobserve(x.target);}}),{rootMargin:'200px 0px',threshold:.01});
     ifr.forEach(f=>io.observe(f));
   }else{ ifr.forEach(load); }
+  // the shader bg is heavy (three.js) — start it at page idle instead of on approach, so it's warm before you scroll to it
+  const eager=()=>load(document.querySelector('#build .antbg'));
+  window.addEventListener('load',()=>{ ('requestIdleCallback' in window)?requestIdleCallback(eager,{timeout:3000}):setTimeout(eager,2500); });
 })();
+
+// SHADER BG FADE-IN — the shader page posts vcn:sg-ready after its first rendered frames
+window.addEventListener('message',e=>{
+  if(e.data==='vcn:sg-ready'){ const f=document.querySelector('#build .antbg'); if(f) f.classList.add('on'); }
+});
 
 // SIM POWER — only the on-screen ASCII sim animates; the others idle their rAF loop (each sim honors vcn:pause / vcn:run).
 // Kills the case where the eager footer wind-tunnel + ant-colony + statement fluid all burn CPU at once.
